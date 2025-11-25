@@ -1,3 +1,148 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "day-1",
+      "description": "A cozy fireplace with stockings.",
+      "imageUrl": "https://images.unsplash.com/photo-1640101128550-cfb12d3d1f43?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxmaXJlcGxhY2UlMjBjaHJpc3RtYXN8ZW58MHx8fHwxNzY0MDkxMTI4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "fireplace christmas"
+    },
+    {
+      "id": "day-2",
+      "description": "Snow-covered pine trees.",
+      "imageUrl": "https://images.unsplash.com/photo-1641743441742-8671236e38fa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzbm93eSUyMGZvcmVzdHxlbnwwfHx8fDE3NjQwNjE5MTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "snowy forest"
+    },
+    {
+      "id": "day-3",
+      "description": "Christmas ornaments on a tree.",
+      "imageUrl": "https://images.unsplash.com/photo-1511895654441-f6a0e1db5cbd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjaHJpc3RtYXMlMjBvcm5hbWVudHxlbnwwfHx8fDE3NjQwODkwMDl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "christmas ornament"
+    },
+    {
+      "id": "day-4",
+      "description": "A cup of hot chocolate with marshmallows.",
+      "imageUrl": "https://images.unsplash.com/photo-1637572815755-c4b80092dce1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxob3QlMjBjaG9jb2xhdGV8ZW58MHx8fHwxNzY0MDg5MDA5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hot chocolate"
+    },
+    {
+      "id": "day-5",
+      "description": "Gingerbread cookies on a baking sheet.",
+      "imageUrl": "https://images.unsplash.com/photo-1698672362756-14375dbb571c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxnaW5nZXJicmVhZCUyMGNvb2tpZXN8ZW58MHx8fHwxNzY0MDkxMTI4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "gingerbread cookies"
+    },
+    {
+      "id": "day-6",
+      "description": "A wrapped Christmas present.",
+      "imageUrl": "https://images.unsplash.com/photo-1546512347-b93b3f59e231?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjaHJpc3RtYXMlMjBwcmVzZW50fGVufDB8fHx8MTc2NDA5MTEyOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "christmas present"
+    },
+    {
+      "id": "day-7",
+      "description": "A festive wreath on a wooden door.",
+      "imageUrl": "https://images.unsplash.com/photo-1514260910257-a0db71806fcf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjaHJpc3RtYXMlMjB3cmVhdGh8ZW58MHx8fHwxNzY0MDg5MDA5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "christmas wreath"
+    },
+    {
+      "id": "day-8",
+      "description": "A snowman with a carrot nose.",
+      "imageUrl": "https://images.unsplash.com/photo-1610204770823-cc2b899425e4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzbm93bWFuJTIwd2ludGVyfGVufDB8fHx8MTc2NDA4OTAxMHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "snowman winter"
+    },
+    {
+      "id": "day-9",
+      "description": "Twinkling Christmas lights.",
+      "imageUrl": "https://images.unsplash.com/photo-1605563037842-8e813f67312c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjaHJpc3RtYXMlMjBsaWdodHN8ZW58MHx8fHwxNzY0MDg3Nzk1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "christmas lights"
+    },
+    {
+      "id": "day-10",
+      "description": "A poinsettia plant.",
+      "imageUrl": "https://images.unsplash.com/photo-1640538303174-306021fd6abc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwb2luc2V0dGlhJTIwY2hyaXN0bWFzfGVufDB8fHx8MTc2NDA5MTEyOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "poinsettia christmas"
+    },
+    {
+      "id": "day-11",
+      "description": "Ice skating on a frozen pond.",
+      "imageUrl": "https://images.unsplash.com/photo-1550035213-5b549273d5cd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8aWNlJTIwc2thdGluZ3xlbnwwfHx8fDE3NjQwOTExMjh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "ice skating"
+    },
+    {
+      "id": "day-12",
+      "description": "A bowl of candy canes.",
+      "imageUrl": "https://images.unsplash.com/photo-1670927982366-107d70e62ef3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjYW5keSUyMGNhbmVzfGVufDB8fHx8MTc2NDA5MTEyOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "candy canes"
+    },
+    {
+      "id": "day-13",
+      "description": "A reindeer in a snowy field.",
+      "imageUrl": "https://images.unsplash.com/photo-1546439565-6f16fd7c4e3b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxyZWluZGVlciUyMHNub3d8ZW58MHx8fHwxNzY0MDkxMTI4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "reindeer snow"
+    },
+    {
+      "id": "day-14",
+      "description": "Children singing carols.",
+      "imageUrl": "https://images.unsplash.com/photo-1606757490212-7f24de71ad66?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjaHJpc3RtYXMlMjBjYXJvbHN8ZW58MHx8fHwxNzY0MDkxMTI4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "christmas carols"
+    },
+    {
+      "id": "day-15",
+      "description": "A plate of Christmas cookies for Santa.",
+      "imageUrl": "https://images.unsplash.com/photo-1616372383709-de2bc15e3dee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjaHJpc3RtYXMlMjBjb29raWVzfGVufDB8fHx8MTc2NDA4OTAwOXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "christmas cookies"
+    },
+    {
+      "id": "day-16",
+      "description": "A detailed snowflake macro shot.",
+      "imageUrl": "https://images.unsplash.com/photo-1704814089112-9a5ff5733c60?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxzbm93Zmxha2UlMjBtYWNyb3xlbnwwfHx8fDE3NjQwOTExMjh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "snowflake macro"
+    },
+    {
+      "id": "day-17",
+      "description": "A nativity scene.",
+      "imageUrl": "https://images.unsplash.com/photo-1606082972417-693e38002ed9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxuYXRpdml0eSUyMHNjZW5lfGVufDB8fHx8MTc2NDA5MTEyOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "nativity scene"
+    },
+    {
+      "id": "day-18",
+      "description": "A warm knitted sweater.",
+      "imageUrl": "https://images.unsplash.com/photo-1646270968802-6bad28659329?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxrbml0dGVkJTIwc3dlYXRlcnxlbnwwfHx8fDE3NjQwOTExMjh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "knitted sweater"
+    },
+    {
+      "id": "day-19",
+      "description": "A Christmas market at night.",
+      "imageUrl": "https://images.unsplash.com/photo-1544212415-8e3d2a27a944?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjaHJpc3RtYXMlMjBtYXJrZXR8ZW58MHx8fHwxNzY0MDkxMTI4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "christmas market"
+    },
+    {
+      "id": "day-20",
+      "description": "Mistletoe hanging in a doorway.",
+      "imageUrl": "https://images.unsplash.com/photo-1637752407379-5fd29babd76f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxtaXN0bGV0b2UlMjBjaHJpc3RtYXN8ZW58MHx8fHwxNzY0MDg5MDA5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mistletoe christmas"
+    },
+    {
+      "id": "day-21",
+      "description": "A star on top of a Christmas tree.",
+      "imageUrl": "https://images.unsplash.com/photo-1608785074540-4b7193dd039e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjaHJpc3RtYXMlMjBzdGFyfGVufDB8fHx8MTc2NDA5MTEyOXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "christmas star"
+    },
+    {
+      "id": "day-22",
+      "description": "A Christmas angel ornament.",
+      "imageUrl": "https://images.unsplash.com/photo-1731179745547-1d9d12596128?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxhbmdlbCUyMG9ybmFtZW50fGVufDB8fHx8MTc2NDA5MTEyOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "angel ornament"
+    },
+    {
+      "id": "day-23",
+      "description": "A family gathered around a Christmas tree.",
+      "imageUrl": "https://images.unsplash.com/photo-1544546491-1ecfecfcc75a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxmYW1pbHklMjBjaHJpc3RtYXN8ZW58MHx8fHwxNzY0MDg5MDA5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "family christmas"
+    },
+    {
+      "id": "day-24",
+      "description": "Santa Claus flying in his sleigh.",
+      "imageUrl": "https://images.unsplash.com/photo-1670030097325-7e4074364911?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzYW50YSUyMHNsZWlnaHxlbnwwfHx8fDE3NjQwODkwMTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "santa sleigh"
+    }
+  ]
 }
