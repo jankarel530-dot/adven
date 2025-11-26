@@ -11,7 +11,7 @@ const alegreya = Alegreya({
 });
 
 export const metadata: Metadata = {
-  title: "Vánoční Čas",
+  title: "Adventní kalendář",
   description: "Adventní kalendář",
 };
 

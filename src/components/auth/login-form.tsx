@@ -25,7 +25,7 @@ export default function LoginForm() {
           <div className="mx-auto mb-4">
             <Snowflake className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="font-headline text-3xl">Vánoční Čas</CardTitle>
+          <CardTitle className="font-headline text-3xl">Adventní kalendář</CardTitle>
           <CardDescription>Prosím, přihlaste se k účtu</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">

@@ -16,7 +16,7 @@ export default function Header({ user }: HeaderProps) {
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <Snowflake className="h-6 w-6 text-primary" />
             <span className="font-bold font-headline sm:inline-block">
-              Vánoční Čas
+              Adventní kalendář
             </span>
           </Link>
         </div>
