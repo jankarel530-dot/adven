@@ -3,10 +3,7 @@
 import Image from "next/image";
 import { Lock, Gift } from "lucide-react";
 import { CalendarWindow as CalendarWindowType } from "@/lib/definitions";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -26,31 +23,39 @@ type CalendarWindowProps = {
   onOpen: (day: number) => void;
 };
 
-export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }: CalendarWindowProps) {
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+export default function CalendarWindow({
+  window,
+  isUnlocked,
+  isOpened,
+  onOpen,
+}: CalendarWindowProps) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-    const handleOpen = () => {
-        if (isUnlocked) {
-            if (!isOpened) {
-                // In a real app, you might want to handle audio differently.
-                // For simplicity, we'll keep it as is, but be aware of browser policies on autoplay.
-                const audio = new Audio('/sounds/jingle.mp3');
-                audio.play().catch(e => console.error("Error playing sound:", e));
-                onOpen(window.day);
-            }
-            setIsDialogOpen(true);
-        }
-    };
+  const handleOpen = () => {
+    if (isUnlocked) {
+      if (!isOpened) {
+        const audio = new Audio("/sounds/jingle.mp3");
+        audio.play().catch((e) => console.error("Error playing sound:", e));
+        onOpen(window.day);
+      }
+      setIsDialogOpen(true);
+    }
+  };
 
   const Icon = isUnlocked ? Gift : Lock;
-  
+
   const content = (
     <Card
       className={cn(
-        "aspect-square flex flex-col items-center justify-center transition-all duration-300 ease-in-out font-bold",
-        !isUnlocked && "cursor-not-allowed bg-secondary text-secondary-foreground opacity-70",
-        isUnlocked && !isOpened && "cursor-pointer bg-primary text-primary-foreground hover:scale-105 hover:shadow-lg hover:bg-primary/90",
-        isUnlocked && isOpened && "cursor-pointer bg-muted hover:scale-105 hover:shadow-lg"
+        "aspect-square flex flex-col items-center justify-center transition-all duration-300 ease-in-out cursor-pointer group",
+        !isUnlocked &&
+          "cursor-not-allowed bg-secondary text-secondary-foreground opacity-70",
+        isUnlocked &&
+          !isOpened &&
+          "bg-destructive text-destructive-foreground hover:scale-105 hover:shadow-lg hover:bg-destructive/90",
+        isUnlocked &&
+          isOpened &&
+          "bg-muted hover:scale-105 hover:shadow-lg"
       )}
       onClick={handleOpen}
     >
@@ -71,7 +76,7 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
 
   const getEmbedUrl = (url: string) => {
     if (url.includes("youtube.com/watch?v=")) {
-      const videoId = url.split("v=")[1].split('&')[0];
+      const videoId = url.split("v=")[1].split("&")[0];
       return `https://www.youtube.com/embed/${videoId}`;
     }
     return url;
@@ -89,31 +94,31 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
             <ChristmasTreeIcon className="h-8 w-8 text-primary" />
             Adventní Okénko: {window.day}. prosince
           </DialogTitle>
-          <DialogDescription asChild>
-             <div dangerouslySetInnerHTML={{ __html: window.message }} />
-          </DialogDescription>
+          <DialogDescription
+            dangerouslySetInnerHTML={{ __html: window.message }}
+          />
         </DialogHeader>
         {hasMedia && (
-            <div className="mt-4 aspect-video w-full">
+          <div className="mt-4 aspect-video w-full">
             {embedVideoUrl ? (
-                <iframe
+              <iframe
                 src={embedVideoUrl}
                 title={`Advent content for day ${window.day}`}
                 className="w-full h-full rounded-md"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
-                />
+              />
             ) : window.imageUrl ? (
-                <Image
-                    src={window.imageUrl}
-                    alt={`Advent content for day ${window.day}`}
-                    width={600}
-                    height={400}
-                    className="rounded-md object-cover w-full h-full"
-                    data-ai-hint={window.imageHint}
-                />
+              <Image
+                src={window.imageUrl}
+                alt={`Advent content for day ${window.day}`}
+                width={600}
+                height={400}
+                className="rounded-md object-cover w-full h-full"
+                data-ai-hint={window.imageHint}
+              />
             ) : null}
-            </div>
+          </div>
         )}
       </DialogContent>
     </Dialog>
