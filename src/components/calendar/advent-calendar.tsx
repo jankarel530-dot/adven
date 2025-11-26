@@ -47,12 +47,12 @@ export default function AdventCalendar({ windows }: AdventCalendarProps) {
       {windows.map((window) => {
         const windowDate = new Date(currentDate.getFullYear(), 11, window.day);
         
-        let isUnlocked = false;
+        let isUnlocked: boolean;
         if (window.manualState === 'unlocked') {
             isUnlocked = true;
         } else if (window.manualState === 'locked') {
             isUnlocked = false;
-        } else {
+        } else { // 'default'
             isUnlocked = isDecember && currentDate >= windowDate;
         }
 
