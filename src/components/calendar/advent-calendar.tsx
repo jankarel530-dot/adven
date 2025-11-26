@@ -10,12 +10,25 @@ type AdventCalendarProps = {
 
 export default function AdventCalendar({ windows }: AdventCalendarProps) {
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
+  const [openedWindows, setOpenedWindows] = useState<number[]>([]);
 
   useEffect(() => {
     // Set date on client to avoid hydration mismatch
     setCurrentDate(new Date());
+
+    // Load opened windows from local storage
+    const storedOpenedWindows = localStorage.getItem("openedAdventWindows");
+    if (storedOpenedWindows) {
+      setOpenedWindows(JSON.parse(storedOpenedWindows));
+    }
   }, []);
 
+  const handleOpenWindow = (day: number) => {
+    const newOpenedWindows = [...openedWindows, day];
+    setOpenedWindows(newOpenedWindows);
+    localStorage.setItem("openedAdventWindows", JSON.stringify(newOpenedWindows));
+  };
+  
   if (!currentDate) {
     // You can render a loader here
     return (
@@ -43,11 +56,15 @@ export default function AdventCalendar({ windows }: AdventCalendarProps) {
             isUnlocked = isDecember && currentDate >= windowDate;
         }
 
+        const isOpened = openedWindows.includes(window.day);
+
         return (
           <CalendarWindow
             key={window.day}
             window={window}
             isUnlocked={isUnlocked}
+            isOpened={isOpened}
+            onOpen={handleOpenWindow}
           />
         );
       })}
