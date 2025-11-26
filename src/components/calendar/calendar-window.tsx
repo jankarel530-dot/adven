@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { ChristmasTreeIcon } from "../icons";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 type CalendarWindowProps = {
   window: CalendarWindowType;
@@ -28,43 +29,41 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     const handleOpen = () => {
-        if (isUnlocked && !isOpened) {
-            const audio = new Audio('/sounds/jingle.mp3');
-            audio.play().catch(e => console.error("Error playing sound:", e));
-            onOpen(window.day);
-        }
         if (isUnlocked) {
+            if (!isOpened) {
+                const audio = new Audio('/sounds/jingle.mp3');
+                audio.play().catch(e => console.error("Error playing sound:", e));
+                onOpen(window.day);
+            }
             setIsDialogOpen(true);
         }
     };
 
   const Icon = isUnlocked ? Gift : Lock;
   
-  let cardClasses = 'cursor-not-allowed bg-muted opacity-70';
-  let iconColor = 'text-muted-foreground';
-  let numberClasses = 'text-primary font-bold';
-
-  if (isUnlocked) {
-    if (isOpened) {
-        cardClasses = 'cursor-pointer bg-secondary hover:scale-105 hover:shadow-lg opacity-70';
-        iconColor = 'text-primary/70';
-        numberClasses = 'text-primary/70 font-bold';
-    } else {
-        cardClasses = 'cursor-pointer bg-destructive text-destructive-foreground hover:scale-105 hover:shadow-lg hover:bg-destructive/90';
-        iconColor = 'text-destructive-foreground';
-        numberClasses = 'text-destructive-foreground font-extrabold';
-    }
-  }
-
-
   const content = (
     <Card
-      className={`aspect-square flex flex-col items-center justify-center transition-all duration-300 ease-in-out ${cardClasses}`}
+      className={cn(
+        "aspect-square flex flex-col items-center justify-center transition-all duration-300 ease-in-out",
+        !isUnlocked && "cursor-not-allowed bg-muted opacity-70",
+        isUnlocked && !isOpened && "cursor-pointer bg-destructive text-destructive-foreground hover:scale-105 hover:shadow-lg hover:bg-destructive/90",
+        isUnlocked && isOpened && "cursor-pointer bg-secondary hover:scale-105 hover:shadow-lg opacity-70"
+      )}
       onClick={handleOpen}
     >
       <CardContent className="p-2 flex flex-col items-center justify-center gap-2 text-center">
-        <Icon className={`h-6 w-6 sm:h-8 sm:w-8 ${iconColor}`} />
-        <p className={`text-2xl sm:text-4xl font-headline font-extrabold ${numberClasses}`}>{window.day}</p>
+        <Icon className={cn(
+            "h-6 w-6 sm:h-8 sm:w-8",
+            !isUnlocked && "text-muted-foreground",
+            isUnlocked && !isOpened && "text-destructive-foreground",
+            isUnlocked && isOpened && "text-primary/70"
+        )} />
+        <p className={cn(
+            "text-2xl sm:text-4xl font-headline font-extrabold",
+            !isUnlocked && "text-primary",
+            isUnlocked && !isOpened && "text-destructive-foreground",
+            isUnlocked && isOpened && "text-primary/70"
+        )}>{window.day}</p>
       </CardContent>
     </Card>
   );
