@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -63,8 +62,10 @@ export default function CalendarWindow({
       <CardContent className="p-2 flex flex-col items-center justify-center gap-2 text-center">
         <Icon className="h-6 w-6 sm:h-8 sm:w-8" />
         <p className={cn(
-          "text-2xl sm:text-4xl font-extrabold",
-          isUnlocked && !isOpened ? "text-destructive-foreground" : isOpened ? "text-muted-foreground" : "text-destructive"
+          "text-2xl sm:text-4xl font-black [text-shadow:0_1px_2px_rgba(0,0,0,0.2)]",
+          !isUnlocked && "text-destructive",
+          isUnlocked && !isOpened && "text-destructive-foreground",
+          isUnlocked && isOpened && "text-muted-foreground",
         )}>
           {window.day}
         </p>
