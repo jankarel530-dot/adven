@@ -5,19 +5,15 @@ import { CalendarWindow as CalendarWindowType } from "@/lib/definitions";
 import CalendarWindow from "./calendar-window";
 
 type AdventCalendarProps = {
-  windowsData: string;
+  windows: CalendarWindowType[];
 };
 
-export default function AdventCalendar({ windowsData }: AdventCalendarProps) {
-  const windows = useMemo(() => JSON.parse(windowsData) as CalendarWindowType[], [windowsData]);
-  const [currentDate, setCurrentDate] = useState(new Date());
+export default function AdventCalendar({ windows }: AdventCalendarProps) {
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [openedWindows, setOpenedWindows] = useState<Set<number>>(new Set());
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
-    
-    // Date is already set, but we can re-sync if needed, though it's not strictly necessary here.
+    // This ensures date-dependent logic only runs on the client
     setCurrentDate(new Date());
 
     const storedOpenedWindows = localStorage.getItem("openedAdventWindows");
@@ -42,7 +38,8 @@ export default function AdventCalendar({ windowsData }: AdventCalendarProps) {
     localStorage.setItem("openedAdventWindows", JSON.stringify(Array.from(newOpenedWindows)));
   };
   
-  if (!isClient) {
+  if (!currentDate) {
+    // Show a loading state until the client has mounted and set the date
     return (
        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
         {Array.from({ length: 24 }).map((_, i) => (

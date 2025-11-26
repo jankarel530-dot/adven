@@ -45,23 +45,15 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
     <Card
       className={cn(
         "aspect-square flex flex-col items-center justify-center transition-all duration-300 ease-in-out",
-        !isUnlocked && "cursor-not-allowed bg-muted opacity-70",
-        isUnlocked && !isOpened && "cursor-pointer bg-destructive text-destructive-foreground hover:scale-105 hover:shadow-lg hover:bg-destructive/90",
-        isUnlocked && isOpened && "cursor-pointer bg-secondary hover:scale-105 hover:shadow-lg opacity-70"
+        !isUnlocked && "cursor-not-allowed bg-secondary text-secondary-foreground opacity-70",
+        isUnlocked && !isOpened && "cursor-pointer bg-primary text-primary-foreground hover:scale-105 hover:shadow-lg hover:bg-primary/90",
+        isUnlocked && isOpened && "cursor-pointer bg-muted hover:scale-105 hover:shadow-lg"
       )}
       onClick={handleOpen}
     >
       <CardContent className="p-2 flex flex-col items-center justify-center gap-2 text-center">
-        <Icon className={cn(
-            "h-6 w-6 sm:h-8 sm:w-8",
-            !isUnlocked && "text-muted-foreground",
-            isUnlocked && "text-destructive-foreground"
-        )} />
-        <p className={cn(
-            "text-2xl sm:text-4xl font-headline font-extrabold",
-            !isUnlocked && "text-primary",
-            isUnlocked && "text-destructive-foreground"
-        )}>{window.day}</p>
+        <Icon className="h-6 w-6 sm:h-8 sm:w-8" />
+        <p className="text-2xl sm:text-4xl font-extrabold">{window.day}</p>
       </CardContent>
     </Card>
   );

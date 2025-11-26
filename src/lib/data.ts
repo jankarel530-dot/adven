@@ -1,4 +1,3 @@
-
 import "server-only";
 import type { User, CalendarWindow } from "./definitions";
 import placeholderData from './placeholder-images.json';
@@ -39,15 +38,28 @@ const initializeWindows = (): CalendarWindow[] => {
   });
 };
 
-if (global.__users === undefined) {
-  global.__users = initializeUsers();
-}
-if (global.__windows === undefined) {
-  global.__windows = initializeWindows();
+const getUsersGlobal = (): User[] => {
+  if (process.env.NODE_ENV === 'production') {
+    return initializeUsers();
+  }
+  if (!global.__users) {
+    global.__users = initializeUsers();
+  }
+  return global.__users;
 }
 
-const users: User[] = global.__users;
-const windows: CalendarWindow[] = global.__windows;
+const getWindowsGlobal = (): CalendarWindow[] => {
+   if (process.env.NODE_ENV === 'production') {
+    return initializeWindows();
+  }
+  if (!global.__windows) {
+    global.__windows = initializeWindows();
+  }
+  return global.__windows;
+}
+
+const users: User[] = getUsersGlobal();
+const windows: CalendarWindow[] = getWindowsGlobal();
 
 
 // --- User Management ---
