@@ -1,7 +1,7 @@
 
 import "server-only";
 import type { User, CalendarWindow } from "./definitions";
-import { PlaceHolderImages } from "./placeholder-images";
+import placeholderData from './placeholder-images.json';
 
 // In a real application, this would be a database.
 // For this scaffold, we use in-memory data.
@@ -14,6 +14,24 @@ declare global {
   var __windows: CalendarWindow[] | undefined;
 }
 
+const initializeWindows = () => {
+  return Array.from({ length: 24 }, (_, i) => {
+    const day = i + 1;
+    const placeholder = placeholderData.placeholderImages.find(p => p.id === `day-${day}`) || {
+      imageUrl: `https://picsum.photos/seed/${day}/600/400`,
+      imageHint: 'christmas placeholder'
+    };
+    return {
+      day: day,
+      message: `A special message for day ${day}!`,
+      imageUrl: placeholder.imageUrl,
+      imageHint: placeholder.imageHint,
+      videoUrl: "",
+      manualState: "default",
+    };
+  });
+};
+
 if (!global.__users) {
   global.__users = [
     { id: "1", username: "admin", password: "password", role: "admin" },
@@ -23,21 +41,7 @@ if (!global.__users) {
 const users = global.__users;
 
 if (!global.__windows) {
-    global.__windows = Array.from({ length: 24 }, (_, i) => {
-      const day = i + 1;
-      const placeholder = PlaceHolderImages.find(p => p.id === `day-${day}`) || {
-        imageUrl: `https://picsum.photos/seed/${day}/600/400`,
-        imageHint: 'christmas placeholder'
-      };
-      return {
-        day: day,
-        message: `A special message for day ${day}!`,
-        imageUrl: placeholder.imageUrl,
-        imageHint: placeholder.imageHint,
-        videoUrl: "",
-        manualState: "default",
-      };
-    });
+    global.__windows = initializeWindows();
 }
 const windows = global.__windows;
 
@@ -88,8 +92,7 @@ export async function updateWindow(day: number, data: Partial<Omit<CalendarWindo
         return null;
     }
 
-    const updatedWindow = { ...windows[windowIndex], ...data };
-    windows[windowIndex] = updatedWindow;
+    windows[windowIndex] = { ...windows[windowIndex], ...data };
     
-    return updatedWindow;
+    return windows[windowIndex];
 }
