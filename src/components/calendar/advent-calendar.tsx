@@ -1,19 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { CalendarWindow as CalendarWindowType } from "@/lib/definitions";
 import CalendarWindow from "./calendar-window";
 
 type AdventCalendarProps = {
-  windows: CalendarWindowType[];
+  windowsData: string;
 };
 
-export default function AdventCalendar({ windows }: AdventCalendarProps) {
-  const [currentDate, setCurrentDate] = useState<Date | null>(null);
+export default function AdventCalendar({ windowsData }: AdventCalendarProps) {
+  const windows = useMemo(() => JSON.parse(windowsData) as CalendarWindowType[], [windowsData]);
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [openedWindows, setOpenedWindows] = useState<Set<number>>(new Set());
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // These operations must run only on the client to avoid hydration mismatch.
+    setIsClient(true);
+    
+    // Date is already set, but we can re-sync if needed, though it's not strictly necessary here.
     setCurrentDate(new Date());
 
     const storedOpenedWindows = localStorage.getItem("openedAdventWindows");
@@ -38,9 +42,7 @@ export default function AdventCalendar({ windows }: AdventCalendarProps) {
     localStorage.setItem("openedAdventWindows", JSON.stringify(Array.from(newOpenedWindows)));
   };
   
-  if (!currentDate) {
-    // Render a skeleton loader on the server and during initial client render
-    // to prevent hydration mismatch. The actual content is rendered in useEffect.
+  if (!isClient) {
     return (
        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
         {Array.from({ length: 24 }).map((_, i) => (
@@ -55,8 +57,6 @@ export default function AdventCalendar({ windows }: AdventCalendarProps) {
   return (
     <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
       {windows.map((window) => {
-        const windowDate = new Date(currentDate.getFullYear(), 11, window.day);
-        
         let isUnlocked: boolean;
         if (window.manualState === 'unlocked') {
             isUnlocked = true;

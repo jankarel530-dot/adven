@@ -11,12 +11,13 @@ export default async function HomePage() {
   }
 
   const windows = await getWindows();
+  const serializedWindows = JSON.stringify(windows);
 
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header user={user} />
       <main className="flex flex-1 flex-col items-center justify-center p-4 md:p-8">
-        <AdventCalendar windows={windows} />
+        <AdventCalendar windowsData={serializedWindows} />
       </main>
     </div>
   );

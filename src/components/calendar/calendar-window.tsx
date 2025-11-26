@@ -55,14 +55,12 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
         <Icon className={cn(
             "h-6 w-6 sm:h-8 sm:w-8",
             !isUnlocked && "text-muted-foreground",
-            isUnlocked && !isOpened && "text-destructive-foreground",
-            isUnlocked && isOpened && "text-primary/70"
+            isUnlocked && "text-destructive-foreground"
         )} />
         <p className={cn(
             "text-2xl sm:text-4xl font-headline font-extrabold",
             !isUnlocked && "text-primary",
-            isUnlocked && !isOpened && "text-destructive-foreground",
-            isUnlocked && isOpened && "text-primary/70"
+            isUnlocked && "text-destructive-foreground"
         )}>{window.day}</p>
       </CardContent>
     </Card>
