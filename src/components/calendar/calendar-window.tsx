@@ -26,13 +26,13 @@ type CalendarWindowProps = {
 
 const numberColors = [
   "text-red-500",
-  "text-green-600",
-  "text-blue-500",
-  "text-purple-500",
-  "text-yellow-500",
+  "text-rose-500",
+  "text-red-600",
   "text-pink-500",
-  "text-teal-500",
-  "text-orange-500",
+  "text-red-700",
+  "text-rose-600",
+  "text-red-400",
+  "text-pink-600",
 ];
 
 export default function CalendarWindow({
