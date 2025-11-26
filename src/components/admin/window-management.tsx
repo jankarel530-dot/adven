@@ -124,7 +124,7 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
         <div className="space-y-2">
             <Label>Náhled zprávy</Label>
             <div 
-              className="min-h-[100px] w-full rounded-md border border-input bg-muted/50 px-3 py-2 text-sm"
+              className="min-h-[100px] w-full rounded-md border border-input bg-muted/50 px-3 py-2 text-sm whitespace-pre-wrap"
               dangerouslySetInnerHTML={{ __html: message || "Zde se zobrazí náhled..." }}
             />
         </div>
