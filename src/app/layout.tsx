@@ -13,6 +13,9 @@ const alegreya = Alegreya({
 export const metadata: Metadata = {
   title: "Adventní kalendář",
   description: "Adventní kalendář",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
