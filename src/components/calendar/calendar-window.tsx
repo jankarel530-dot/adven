@@ -100,7 +100,7 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 />
-            ) : (
+            ) : window.imageUrl ? (
                 <Image
                     src={window.imageUrl}
                     alt={`Advent content for day ${window.day}`}
@@ -109,7 +109,7 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
                     className="rounded-md object-cover w-full h-full"
                     data-ai-hint={window.imageHint}
                 />
-            )}
+            ) : null}
             </div>
         )}
       </DialogContent>

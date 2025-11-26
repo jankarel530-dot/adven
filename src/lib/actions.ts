@@ -65,6 +65,7 @@ export async function addUser(prevState: any, formData: FormData) {
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
+      message: "Validation failed."
     };
   }
 
@@ -72,7 +73,7 @@ export async function addUser(prevState: any, formData: FormData) {
 
   const existingUser = await findUserByUsername(username);
   if (existingUser) {
-    return { message: "Username already exists" };
+    return { message: "Username already exists", errors: { username: ["Username already taken"] } };
   }
 
   await dbAddUser({ username, password });
@@ -93,7 +94,7 @@ export async function deleteUserAction(id: string) {
 const updateWindowSchema = z.object({
     day: z.coerce.number(),
     message: z.string().min(1, "Message cannot be empty"),
-    imageUrl: z.string().url("Must be a valid URL"),
+    imageUrl: z.string().url("Must be a valid URL if provided").optional().or(z.literal('')),
     videoUrl: z.string().url("Must be a valid URL if provided").optional().or(z.literal('')),
     manualState: z.enum(["default", "unlocked", "locked"]),
 })
@@ -109,8 +110,12 @@ export async function updateWindow(prevState: any, formData: FormData) {
             message: "Validation failed."
         };
     }
-    
+
     const { day, ...data } = validatedFields.data;
+
+    if (!data.imageUrl && !data.videoUrl) {
+      // You can decide if at least one is required, for now we allow both to be empty
+    }
     
     try {
         await dbUpdateWindow(day, data as Partial<CalendarWindow>);
@@ -118,6 +123,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
         revalidatePath("/");
         return { message: `Window for day ${day} updated.` };
     } catch (error) {
-        return { message: "Failed to update window." };
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+        return { message: `Failed to update window: ${errorMessage}` };
     }
 }

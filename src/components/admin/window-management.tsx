@@ -49,11 +49,24 @@ export default function WindowManagement({
   );
 }
 
+const getEmbedUrl = (url: string) => {
+    if (url.includes("youtube.com/watch?v=")) {
+      const videoId = url.split("v=")[1].split('&')[0];
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+    // Add other video platforms if needed
+    return url;
+};
+
 function WindowForm({ windowData }: { windowData: CalendarWindow }) {
   const [state, action] = useFormState(updateWindow, undefined);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // States for controlled components
+  const [message, setMessage] = useState(windowData.message);
+  const [imageUrl, setImageUrl] = useState(windowData.imageUrl);
+  const [videoUrl, setVideoUrl] = useState(windowData.videoUrl || '');
 
   useEffect(() => {
     if (state?.message) {
@@ -66,25 +79,25 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
   }, [state, toast, windowData.day]);
   
   const applyFormat = (tag: 'b' | 'i') => {
-    const textarea = textareaRef.current;
+    const textarea = formRef.current?.querySelector('textarea');
     if (!textarea) return;
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = textarea.value.substring(start, end);
-    const textBefore = textarea.value.substring(0, start);
-    const textAfter = textarea.value.substring(end);
-
-    const newText = `${textBefore}<${tag}>${selectedText}</${tag}>${textAfter}`;
     
-    // This is a simplified way to update the value for React
-    const nativeTextareaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
-    nativeTextareaSetter?.call(textarea, newText);
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    const newText = `${textarea.value.substring(0, start)}<${tag}>${selectedText}</${tag}>${textarea.value.substring(end)}`;
+    
+    setMessage(newText);
 
+    // Focus and select the text inside the new tags
     textarea.focus();
-    textarea.setSelectionRange(start + tag.length + 2, end + tag.length + 2);
+    setTimeout(() => {
+        textarea.setSelectionRange(start + tag.length + 2, end + tag.length + 2);
+    }, 0);
   };
+
+  const embedVideoUrl = videoUrl ? getEmbedUrl(videoUrl) : null;
 
 
   return (
@@ -99,10 +112,10 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
              <Button type="button" variant="outline" size="icon" onClick={() => applyFormat('i')}><Italic/></Button>
           </div>
           <Textarea
-            ref={textareaRef}
             id={`message-${windowData.day}`}
             name="message"
-            defaultValue={windowData.message}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
             className="min-h-[100px]"
           />
         </div>
@@ -112,7 +125,9 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
           <Input
             id={`imageUrl-${windowData.day}`}
             name="imageUrl"
-            defaultValue={windowData.imageUrl}
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="např. https://images.unsplash.com/..."
           />
         </div>
 
@@ -121,7 +136,8 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
           <Input
             id={`videoUrl-${windowData.day}`}
             name="videoUrl"
-            defaultValue={windowData.videoUrl}
+            value={videoUrl}
+            onChange={(e) => setVideoUrl(e.target.value)}
             placeholder="např. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
           />
         </div>
@@ -146,15 +162,30 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
         
         <SubmitButton />
       </div>
-      <div className="flex items-center justify-center">
-        <Image 
-            src={windowData.imageUrl}
-            alt={`Preview for day ${windowData.day}`}
-            width={300}
-            height={200}
-            className="rounded-md object-cover"
-            data-ai-hint={windowData.imageHint}
-        />
+      <div className="flex items-center justify-center bg-muted/50 rounded-md aspect-video">
+        {embedVideoUrl ? (
+             <iframe
+                src={embedVideoUrl}
+                title={`Preview for day ${windowData.day}`}
+                className="w-full h-full rounded-md"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+            />
+        ) : imageUrl ? (
+            <Image 
+                src={imageUrl}
+                alt={`Preview for day ${windowData.day}`}
+                width={300}
+                height={200}
+                className="rounded-md object-cover"
+                data-ai-hint={windowData.imageHint}
+            />
+        ) : (
+            <div className="text-muted-foreground text-center p-4">
+                <p>Žádný mediální obsah.</p>
+                <p className="text-xs">Zadejte URL obrázku nebo videa.</p>
+            </div>
+        )}
       </div>
     </form>
   );
