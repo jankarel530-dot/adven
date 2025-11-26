@@ -39,10 +39,10 @@ const initializeWindows = (): CalendarWindow[] => {
   });
 };
 
-if (!global.__users) {
+if (global.__users === undefined) {
   global.__users = initializeUsers();
 }
-if (!global.__windows) {
+if (global.__windows === undefined) {
   global.__windows = initializeWindows();
 }
 
@@ -52,11 +52,12 @@ const windows: CalendarWindow[] = global.__windows;
 
 // --- User Management ---
 export async function getUsers(): Promise<User[]> {
-  return [...users];
+  return JSON.parse(JSON.stringify(users));
 }
 
 export async function findUserByUsername(username: string): Promise<User | undefined> {
-  return users.find((user) => user.username === username);
+  const user = users.find((user) => user.username === username);
+  return user ? JSON.parse(JSON.stringify(user)) : undefined;
 }
 
 export async function addUser(user: Omit<User, "id" | "role">): Promise<User> {
@@ -66,7 +67,7 @@ export async function addUser(user: Omit<User, "id" | "role">): Promise<User> {
     role: "user",
   };
   users.push(newUser);
-  return newUser;
+  return JSON.parse(JSON.stringify(newUser));
 }
 
 export async function deleteUser(id: string): Promise<{ message: string } | null> {
@@ -84,11 +85,12 @@ export async function deleteUser(id: string): Promise<{ message: string } | null
 
 // --- Window Management ---
 export async function getWindows(): Promise<CalendarWindow[]> {
-  return [...windows];
+  return JSON.parse(JSON.stringify(windows));
 }
 
 export async function getWindowByDay(day: number): Promise<CalendarWindow | undefined> {
-  return windows.find(w => w.day === day);
+  const window = windows.find(w => w.day === day);
+  return window ? JSON.parse(JSON.stringify(window)) : undefined;
 }
 
 export async function updateWindow(day: number, data: Partial<Omit<CalendarWindow, 'day'>>): Promise<CalendarWindow | null> {
@@ -99,5 +101,5 @@ export async function updateWindow(day: number, data: Partial<Omit<CalendarWindo
 
     windows[windowIndex] = { ...windows[windowIndex], ...data };
     
-    return windows[windowIndex];
+    return JSON.parse(JSON.stringify(windows[windowIndex]));
 }

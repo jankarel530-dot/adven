@@ -10,36 +10,37 @@ type AdventCalendarProps = {
 
 export default function AdventCalendar({ windows }: AdventCalendarProps) {
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
-  const [openedWindows, setOpenedWindows] = useState<number[]>([]);
+  const [openedWindows, setOpenedWindows] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    // Set date on client to avoid hydration mismatch
+    // These operations must run only on the client to avoid hydration mismatch.
     setCurrentDate(new Date());
 
-    // Load opened windows from local storage
     const storedOpenedWindows = localStorage.getItem("openedAdventWindows");
     if (storedOpenedWindows) {
       try {
         const parsed = JSON.parse(storedOpenedWindows);
         if (Array.isArray(parsed)) {
-            setOpenedWindows(parsed);
+          setOpenedWindows(new Set(parsed));
         }
       } catch (e) {
         console.error("Failed to parse opened windows from localStorage", e);
-        setOpenedWindows([]);
+        setOpenedWindows(new Set());
       }
     }
   }, []);
 
   const handleOpenWindow = (day: number) => {
-    if (openedWindows.includes(day)) return;
-    const newOpenedWindows = [...openedWindows, day];
+    if (openedWindows.has(day)) return;
+    const newOpenedWindows = new Set(openedWindows);
+    newOpenedWindows.add(day);
     setOpenedWindows(newOpenedWindows);
-    localStorage.setItem("openedAdventWindows", JSON.stringify(newOpenedWindows));
+    localStorage.setItem("openedAdventWindows", JSON.stringify(Array.from(newOpenedWindows)));
   };
   
   if (!currentDate) {
-    // You can render a loader here
+    // Render a skeleton loader on the server and during initial client render
+    // to prevent hydration mismatch. The actual content is rendered in useEffect.
     return (
        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
         {Array.from({ length: 24 }).map((_, i) => (
@@ -62,10 +63,10 @@ export default function AdventCalendar({ windows }: AdventCalendarProps) {
         } else if (window.manualState === 'locked') {
             isUnlocked = false;
         } else { // 'default'
-            isUnlocked = isDecember && currentDate >= windowDate;
+            isUnlocked = isDecember && currentDate.getDate() >= window.day;
         }
 
-        const isOpened = openedWindows.includes(window.day);
+        const isOpened = openedWindows.has(window.day);
 
         return (
           <CalendarWindow
