@@ -64,7 +64,7 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
     >
       <CardContent className="p-2 flex flex-col items-center justify-center gap-2 text-center">
         <Icon className={`h-6 w-6 sm:h-8 sm:w-8 ${iconColor}`} />
-        <p className={`text-2xl sm:text-4xl font-headline ${numberClasses}`}>{window.day}</p>
+        <p className={`text-2xl sm:text-4xl font-headline font-extrabold ${numberClasses}`}>{window.day}</p>
       </CardContent>
     </Card>
   );
