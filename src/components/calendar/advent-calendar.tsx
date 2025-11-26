@@ -5,15 +5,15 @@ import { CalendarWindow as CalendarWindowType } from "@/lib/definitions";
 import CalendarWindow from "./calendar-window";
 
 type AdventCalendarProps = {
-  windows: CalendarWindowType[];
+  windowsData: string;
 };
 
-export default function AdventCalendar({ windows }: AdventCalendarProps) {
+export default function AdventCalendar({ windowsData }: AdventCalendarProps) {
+  const windows: CalendarWindowType[] = useMemo(() => JSON.parse(windowsData), [windowsData]);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [openedWindows, setOpenedWindows] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    // This ensures date-dependent logic only runs on the client
     setCurrentDate(new Date());
 
     const storedOpenedWindows = localStorage.getItem("openedAdventWindows");
@@ -37,13 +37,13 @@ export default function AdventCalendar({ windows }: AdventCalendarProps) {
     setOpenedWindows(newOpenedWindows);
     localStorage.setItem("openedAdventWindows", JSON.stringify(Array.from(newOpenedWindows)));
   };
-  
+
   if (!currentDate) {
-    // Show a loading state until the client has mounted and set the date
+    // Show a loading state or placeholders until the client has mounted
     return (
        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-        {Array.from({ length: 24 }).map((_, i) => (
-          <div key={i} className="aspect-square animate-pulse rounded-lg bg-muted"></div>
+        {windows.map((window) => (
+           <div key={window.day} className="aspect-square animate-pulse rounded-lg bg-muted"></div>
         ))}
       </div>
     );
