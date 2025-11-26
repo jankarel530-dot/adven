@@ -13,7 +13,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { ChristmasTreeIcon } from "../icons";
 import { useState } from "react";
@@ -43,17 +42,17 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
   
   let cardClasses = 'cursor-not-allowed bg-muted opacity-70';
   let iconColor = 'text-muted-foreground';
-  let numberColor = 'text-primary';
+  let numberClasses = 'text-primary font-bold';
 
   if (isUnlocked) {
     if (isOpened) {
         cardClasses = 'cursor-pointer bg-secondary hover:scale-105 hover:shadow-lg opacity-70';
         iconColor = 'text-primary/70';
-        numberColor = 'text-primary/70 font-bold';
+        numberClasses = 'text-primary/70 font-bold';
     } else {
         cardClasses = 'cursor-pointer bg-destructive text-destructive-foreground hover:scale-105 hover:shadow-lg hover:bg-destructive/90';
         iconColor = 'text-destructive-foreground';
-        numberColor = 'text-destructive-foreground font-extrabold';
+        numberClasses = 'text-destructive-foreground font-extrabold';
     }
   }
 
@@ -65,7 +64,7 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
     >
       <CardContent className="p-2 flex flex-col items-center justify-center gap-2 text-center">
         <Icon className={`h-6 w-6 sm:h-8 sm:w-8 ${iconColor}`} />
-        <p className={`text-2xl sm:text-4xl font-headline ${numberColor}`}>{window.day}</p>
+        <p className={`text-2xl sm:text-4xl font-headline ${numberClasses}`}>{window.day}</p>
       </CardContent>
     </Card>
   );
