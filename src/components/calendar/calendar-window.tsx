@@ -13,6 +13,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { ChristmasTreeIcon } from "../icons";
 import { useState } from "react";
@@ -31,6 +32,8 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
     const handleOpen = () => {
         if (isUnlocked) {
             if (!isOpened) {
+                // In a real app, you might want to handle audio differently.
+                // For simplicity, we'll keep it as is, but be aware of browser policies on autoplay.
                 const audio = new Audio('/sounds/jingle.mp3');
                 audio.play().catch(e => console.error("Error playing sound:", e));
                 onOpen(window.day);
@@ -44,7 +47,7 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
   const content = (
     <Card
       className={cn(
-        "aspect-square flex flex-col items-center justify-center transition-all duration-300 ease-in-out",
+        "aspect-square flex flex-col items-center justify-center transition-all duration-300 ease-in-out font-bold",
         !isUnlocked && "cursor-not-allowed bg-secondary text-secondary-foreground opacity-70",
         isUnlocked && !isOpened && "cursor-pointer bg-primary text-primary-foreground hover:scale-105 hover:shadow-lg hover:bg-primary/90",
         isUnlocked && isOpened && "cursor-pointer bg-muted hover:scale-105 hover:shadow-lg"
