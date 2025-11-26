@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -23,6 +24,17 @@ type CalendarWindowProps = {
   onOpen: (day: number) => void;
 };
 
+const numberColors = [
+  "text-red-500",
+  "text-green-600",
+  "text-blue-500",
+  "text-purple-500",
+  "text-yellow-500",
+  "text-pink-500",
+  "text-teal-500",
+  "text-orange-500",
+];
+
 export default function CalendarWindow({
   window,
   isUnlocked,
@@ -43,6 +55,7 @@ export default function CalendarWindow({
   };
 
   const Icon = isUnlocked ? Gift : Lock;
+  const colorClass = numberColors[window.day % numberColors.length];
 
   const content = (
     <Card
@@ -61,7 +74,12 @@ export default function CalendarWindow({
     >
       <CardContent className="p-2 flex flex-col items-center justify-center gap-2 text-center">
         <Icon className="h-6 w-6 sm:h-8 sm:w-8" />
-        <p className="text-2xl sm:text-4xl font-extrabold">{window.day}</p>
+        <p className={cn(
+          "text-2xl sm:text-4xl font-extrabold",
+          isUnlocked && !isOpened ? "text-destructive-foreground" : isOpened ? "text-muted-foreground" : colorClass
+        )}>
+          {window.day}
+        </p>
       </CardContent>
     </Card>
   );
