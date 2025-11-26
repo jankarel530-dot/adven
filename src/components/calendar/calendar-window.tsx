@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Lock, Gift } from "lucide-react";
+import { Lock, Gift, Snowflake } from "lucide-react";
 import { CalendarWindow as CalendarWindowType } from "@/lib/definitions";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ChristmasTreeIcon } from "../icons";
+import { ChristmasTreeIcon, OrnamentIcon } from "../icons";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -88,38 +88,42 @@ export default function CalendarWindow({
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>{content}</DialogTrigger>
-      <DialogContent className="sm:max-w-[625px]">
-        <DialogHeader>
-          <DialogTitle className="font-headline text-3xl flex items-center gap-2">
-            <ChristmasTreeIcon className="h-8 w-8 text-primary" />
-            Adventní Okénko: {window.day}. prosince
-          </DialogTitle>
-          <DialogDescription
-            dangerouslySetInnerHTML={{ __html: window.message }}
-          />
-        </DialogHeader>
-        {hasMedia && (
-          <div className="mt-4 aspect-video w-full">
-            {embedVideoUrl ? (
-              <iframe
-                src={embedVideoUrl}
-                title={`Advent content for day ${window.day}`}
-                className="w-full h-full rounded-md"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            ) : window.imageUrl ? (
-              <Image
-                src={window.imageUrl}
-                alt={`Advent content for day ${window.day}`}
-                width={600}
-                height={400}
-                className="rounded-md object-cover w-full h-full"
-                data-ai-hint={window.imageHint}
-              />
-            ) : null}
-          </div>
-        )}
+      <DialogContent className="sm:max-w-[625px] overflow-hidden">
+        <OrnamentIcon className="absolute -top-4 -left-5 h-16 w-16 text-primary/30 rotate-[-30deg] opacity-50" />
+        <Snowflake className="absolute -top-3 -right-4 h-16 w-16 text-primary/30 rotate-[20deg] opacity-50" />
+        <div className="border-2 border-dashed border-primary/50 p-6 rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-3xl flex items-center gap-2">
+              <ChristmasTreeIcon className="h-8 w-8 text-primary" />
+              Adventní Okénko: {window.day}. prosince
+            </DialogTitle>
+            <DialogDescription
+              dangerouslySetInnerHTML={{ __html: window.message }}
+            />
+          </DialogHeader>
+          {hasMedia && (
+            <div className="mt-4 aspect-video w-full">
+              {embedVideoUrl ? (
+                <iframe
+                  src={embedVideoUrl}
+                  title={`Advent content for day ${window.day}`}
+                  className="w-full h-full rounded-md"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : window.imageUrl ? (
+                <Image
+                  src={window.imageUrl}
+                  alt={`Advent content for day ${window.day}`}
+                  width={600}
+                  height={400}
+                  className="rounded-md object-cover w-full h-full"
+                  data-ai-hint={window.imageHint}
+                />
+              ) : null}
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
