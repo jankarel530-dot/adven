@@ -27,9 +27,8 @@ let windows: CalendarWindow[] = Array.from({ length: 24 }, (_, i) => {
 });
 
 // --- User Management ---
-export async function getUsers(): Promise<Omit<User, 'password'>[]> {
-  // Never return passwords, even in a mock API
-  return users.map(({ password, ...user }) => user);
+export async function getUsers(): Promise<User[]> {
+  return users;
 }
 
 export async function findUserByUsername(username: string): Promise<User | undefined> {
@@ -44,6 +43,19 @@ export async function addUser(user: Omit<User, "id" | "role">): Promise<User> {
   };
   users.push(newUser);
   return newUser;
+}
+
+export async function deleteUser(id: string): Promise<{ message: string } | null> {
+    const userIndex = users.findIndex(user => user.id === id);
+    if (userIndex === -1) {
+        return { message: "User not found" };
+    }
+    const userToDelete = users[userIndex];
+    if (userToDelete.role === 'admin') {
+        return { message: "Cannot delete admin user" };
+    }
+    users.splice(userIndex, 1);
+    return null;
 }
 
 // --- Window Management ---

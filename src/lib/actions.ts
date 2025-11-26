@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { findUserByUsername, addUser as dbAddUser, updateWindow as dbUpdateWindow } from "./data";
+import { findUserByUsername, addUser as dbAddUser, updateWindow as dbUpdateWindow, deleteUser as dbDeleteUser } from "./data";
 import type { CalendarWindow } from "./definitions";
 
 const loginSchema = z.object({
@@ -79,6 +79,16 @@ export async function addUser(prevState: any, formData: FormData) {
   revalidatePath("/admin/users");
   return { message: `User ${username} created successfully.` };
 }
+
+export async function deleteUserAction(id: string) {
+    const error = await dbDeleteUser(id);
+    if (error) {
+        return { message: error.message, isError: true };
+    }
+    revalidatePath('/admin/users');
+    return { message: 'User deleted successfully.', isError: false };
+}
+
 
 const updateWindowSchema = z.object({
     day: z.coerce.number(),
