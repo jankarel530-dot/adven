@@ -39,8 +39,15 @@ const initializeWindows = (): CalendarWindow[] => {
   });
 };
 
-const users = global.__users || (global.__users = initializeUsers());
-const windows = global.__windows || (global.__windows = initializeWindows());
+if (!global.__users) {
+  global.__users = initializeUsers();
+}
+if (!global.__windows) {
+  global.__windows = initializeWindows();
+}
+
+const users: User[] = global.__users;
+const windows: CalendarWindow[] = global.__windows;
 
 
 // --- User Management ---

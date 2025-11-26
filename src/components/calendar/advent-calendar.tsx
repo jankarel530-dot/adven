@@ -32,6 +32,7 @@ export default function AdventCalendar({ windows }: AdventCalendarProps) {
   }, []);
 
   const handleOpenWindow = (day: number) => {
+    if (openedWindows.includes(day)) return;
     const newOpenedWindows = [...openedWindows, day];
     setOpenedWindows(newOpenedWindows);
     localStorage.setItem("openedAdventWindows", JSON.stringify(newOpenedWindows));
