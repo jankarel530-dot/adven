@@ -86,15 +86,16 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
     const end = textarea.selectionEnd;
     const selectedText = textarea.value.substring(start, end);
     
-    const newText = `${textarea.value.substring(0, start)}<${tag}>${selectedText}</${tag}>${textarea.value.substring(end)}`;
-    
-    setMessage(newText);
-
-    // Focus and select the text inside the new tags
-    textarea.focus();
-    setTimeout(() => {
-        textarea.setSelectionRange(start + tag.length + 2, end + tag.length + 2);
-    }, 0);
+    if (selectedText) {
+        const newText = `${textarea.value.substring(0, start)}<${tag}>${selectedText}</${tag}>${textarea.value.substring(end)}`;
+        setMessage(newText);
+        
+        // Focus and select the text inside the new tags
+        textarea.focus();
+        setTimeout(() => {
+            textarea.setSelectionRange(start + tag.length + 2, end + tag.length + 2);
+        }, 0);
+    }
   };
 
   const embedVideoUrl = videoUrl ? getEmbedUrl(videoUrl) : null;
@@ -118,6 +119,14 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
             onChange={(e) => setMessage(e.target.value)}
             className="min-h-[100px]"
           />
+        </div>
+
+        <div className="space-y-2">
+            <Label>Náhled zprávy</Label>
+            <div 
+              className="min-h-[100px] w-full rounded-md border border-input bg-muted/50 px-3 py-2 text-sm"
+              dangerouslySetInnerHTML={{ __html: message || "Zde se zobrazí náhled..." }}
+            />
         </div>
         
         <div>
@@ -162,30 +171,33 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
         
         <SubmitButton />
       </div>
-      <div className="flex items-center justify-center bg-muted/50 rounded-md aspect-video">
-        {embedVideoUrl ? (
-             <iframe
-                src={embedVideoUrl}
-                title={`Preview for day ${windowData.day}`}
-                className="w-full h-full rounded-md"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-            />
-        ) : imageUrl ? (
-            <Image 
-                src={imageUrl}
-                alt={`Preview for day ${windowData.day}`}
-                width={300}
-                height={200}
-                className="rounded-md object-cover"
-                data-ai-hint={windowData.imageHint}
-            />
-        ) : (
-            <div className="text-muted-foreground text-center p-4">
-                <p>Žádný mediální obsah.</p>
-                <p className="text-xs">Zadejte URL obrázku nebo videa.</p>
-            </div>
-        )}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-center bg-muted/50 rounded-md aspect-video">
+            {embedVideoUrl ? (
+                <iframe
+                    src={embedVideoUrl}
+                    title={`Preview for day ${windowData.day}`}
+                    className="w-full h-full rounded-md"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                />
+            ) : imageUrl ? (
+                <Image 
+                    src={imageUrl}
+                    alt={`Preview for day ${windowData.day}`}
+                    width={300}
+                    height={200}
+                    className="rounded-md object-cover"
+                    data-ai-hint={windowData.imageHint}
+                />
+            ) : (
+                <div className="text-muted-foreground text-center p-4">
+                    <p>Žádný mediální obsah.</p>
+                    <p className="text-xs">Zadejte URL obrázku nebo videa.</p>
+                </div>
+            )}
+        </div>
+        
       </div>
     </form>
   );
