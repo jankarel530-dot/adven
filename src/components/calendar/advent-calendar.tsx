@@ -19,7 +19,15 @@ export default function AdventCalendar({ windows }: AdventCalendarProps) {
     // Load opened windows from local storage
     const storedOpenedWindows = localStorage.getItem("openedAdventWindows");
     if (storedOpenedWindows) {
-      setOpenedWindows(JSON.parse(storedOpenedWindows));
+      try {
+        const parsed = JSON.parse(storedOpenedWindows);
+        if (Array.isArray(parsed)) {
+            setOpenedWindows(parsed);
+        }
+      } catch (e) {
+        console.error("Failed to parse opened windows from localStorage", e);
+        setOpenedWindows([]);
+      }
     }
   }, []);
 

@@ -14,7 +14,14 @@ declare global {
   var __windows: CalendarWindow[] | undefined;
 }
 
-const initializeWindows = () => {
+const initializeUsers = (): User[] => {
+    return [
+        { id: "1", username: "admin", password: "password", role: "admin" },
+        { id: "2", username: "user", password: "password", role: "user" },
+    ];
+}
+
+const initializeWindows = (): CalendarWindow[] => {
   return Array.from({ length: 24 }, (_, i) => {
     const day = i + 1;
     const placeholder = placeholderData.placeholderImages.find(p => p.id === `day-${day}`) || {
@@ -32,22 +39,13 @@ const initializeWindows = () => {
   });
 };
 
-if (!global.__users) {
-  global.__users = [
-    { id: "1", username: "admin", password: "password", role: "admin" },
-    { id: "2", username: "user", password: "password", role: "user" },
-  ];
-}
-const users = global.__users;
+const users = global.__users || (global.__users = initializeUsers());
+const windows = global.__windows || (global.__windows = initializeWindows());
 
-if (!global.__windows) {
-    global.__windows = initializeWindows();
-}
-const windows = global.__windows;
 
 // --- User Management ---
 export async function getUsers(): Promise<User[]> {
-  return users;
+  return [...users];
 }
 
 export async function findUserByUsername(username: string): Promise<User | undefined> {
@@ -57,7 +55,7 @@ export async function findUserByUsername(username: string): Promise<User | undef
 export async function addUser(user: Omit<User, "id" | "role">): Promise<User> {
   const newUser: User = {
     ...user,
-    id: String(users.length + 1),
+    id: String(Date.now()), // Use a more unique ID
     role: "user",
   };
   users.push(newUser);
@@ -79,7 +77,7 @@ export async function deleteUser(id: string): Promise<{ message: string } | null
 
 // --- Window Management ---
 export async function getWindows(): Promise<CalendarWindow[]> {
-  return windows;
+  return [...windows];
 }
 
 export async function getWindowByDay(day: number): Promise<CalendarWindow | undefined> {
