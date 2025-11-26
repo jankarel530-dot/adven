@@ -40,21 +40,32 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
     };
 
   const Icon = isUnlocked ? Gift : Lock;
-  const iconColor = isUnlocked ? (isOpened ? 'text-primary/70' : 'text-destructive') : 'text-muted-foreground';
-  const numberColor = isUnlocked ? (isOpened ? 'text-primary/70' : 'text-destructive') : 'text-primary';
+  
+  let cardClasses = 'cursor-not-allowed bg-muted opacity-70';
+  let iconColor = 'text-muted-foreground';
+  let numberColor = 'text-primary';
+
+  if (isUnlocked) {
+    if (isOpened) {
+        cardClasses = 'cursor-pointer bg-secondary hover:scale-105 hover:shadow-lg opacity-70';
+        iconColor = 'text-primary/70';
+        numberColor = 'text-primary/70 font-bold';
+    } else {
+        cardClasses = 'cursor-pointer bg-destructive text-destructive-foreground hover:scale-105 hover:shadow-lg hover:bg-destructive/90';
+        iconColor = 'text-destructive-foreground';
+        numberColor = 'text-destructive-foreground font-extrabold';
+    }
+  }
+
 
   const content = (
     <Card
-      className={`aspect-square flex flex-col items-center justify-center transition-all duration-300 ease-in-out ${
-        isUnlocked
-          ? `cursor-pointer bg-secondary hover:scale-105 hover:shadow-lg ${isOpened ? 'opacity-70' : ''}`
-          : "cursor-not-allowed bg-muted opacity-70"
-      }`}
-       onClick={handleOpen}
+      className={`aspect-square flex flex-col items-center justify-center transition-all duration-300 ease-in-out ${cardClasses}`}
+      onClick={handleOpen}
     >
       <CardContent className="p-2 flex flex-col items-center justify-center gap-2 text-center">
         <Icon className={`h-6 w-6 sm:h-8 sm:w-8 ${iconColor}`} />
-        <p className={`text-2xl sm:text-4xl font-headline font-extrabold ${numberColor}`}>{window.day}</p>
+        <p className={`text-2xl sm:text-4xl font-headline ${numberColor}`}>{window.day}</p>
       </CardContent>
     </Card>
   );
@@ -80,7 +91,7 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogTrigger asChild>{isOpened ? content : <></>}</DialogTrigger>
+      <DialogTrigger asChild>{content}</DialogTrigger>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
           <DialogTitle className="font-headline text-3xl flex items-center gap-2">
