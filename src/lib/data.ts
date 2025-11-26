@@ -22,6 +22,7 @@ let windows: CalendarWindow[] = Array.from({ length: 24 }, (_, i) => {
     message: `A special message for day ${day}!`,
     imageUrl: placeholder.imageUrl,
     imageHint: placeholder.imageHint,
+    videoUrl: "", // Initialize with empty videoUrl
     manualState: "default",
   };
 });

@@ -10,5 +10,6 @@ export type CalendarWindow = {
   message: string;
   imageUrl: string;
   imageHint: string;
+  videoUrl?: string; // Add optional videoUrl
   manualState: "default" | "unlocked" | "locked";
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Lock, Gift, Eye } from "lucide-react";
+import { Lock, Gift } from "lucide-react";
 import { CalendarWindow as CalendarWindowType } from "@/lib/definitions";
 import {
   Card,
@@ -13,7 +13,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { ChristmasTreeIcon } from "../icons";
 import { useState } from "react";
@@ -39,20 +38,20 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
         }
     };
 
-  const Icon = isUnlocked ? (hasBeenClicked ? Eye : Gift) : Lock;
-  const iconColor = isUnlocked ? (hasBeenClicked ? 'text-primary' : 'text-accent') : 'text-muted-foreground';
+  const Icon = isUnlocked ? Gift : Lock;
+  const iconColor = isUnlocked ? (hasBeenClicked ? 'text-primary/70' : 'text-accent') : 'text-muted-foreground';
 
   const content = (
     <Card
       className={`aspect-square flex flex-col items-center justify-center transition-all duration-300 ease-in-out ${
         isUnlocked
-          ? `cursor-pointer bg-secondary hover:scale-105 hover:shadow-lg ${hasBeenClicked ? 'opacity-80' : ''}`
+          ? `cursor-pointer bg-secondary hover:scale-105 hover:shadow-lg ${hasBeenClicked ? 'opacity-70' : ''}`
           : "cursor-not-allowed bg-muted opacity-70"
       }`}
     >
       <CardContent className="p-2 flex flex-col items-center justify-center gap-2 text-center">
         <Icon className={`h-6 w-6 sm:h-8 sm:w-8 ${iconColor}`} />
-        <p className="text-2xl sm:text-4xl font-bold font-headline text-primary">{window.day}</p>
+        <p className={`text-2xl sm:text-4xl font-bold font-headline ${hasBeenClicked ? 'text-primary/70' : 'text-primary'}`}>{window.day}</p>
       </CardContent>
     </Card>
   );
@@ -65,6 +64,19 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
     );
   }
 
+  const getEmbedUrl = (url: string) => {
+    if (url.includes("youtube.com/watch?v=")) {
+      const videoId = url.split("v=")[1].split('&')[0];
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+    // Add other video platforms if needed
+    return url;
+  };
+
+  const hasMedia = window.imageUrl || window.videoUrl;
+  const embedVideoUrl = window.videoUrl ? getEmbedUrl(window.videoUrl) : null;
+
+
   return (
     <Dialog>
       <DialogTrigger asChild onClick={handleOpen}>{content}</DialogTrigger>
@@ -74,18 +86,32 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
             <ChristmasTreeIcon className="h-8 w-8 text-primary" />
             Adventní Okénko: {window.day}. prosince
           </DialogTitle>
-          <DialogDescription>{window.message}</DialogDescription>
+          <DialogDescription asChild>
+             <div dangerouslySetInnerHTML={{ __html: window.message }} />
+          </DialogDescription>
         </DialogHeader>
-        <div className="mt-4">
-          <Image
-            src={window.imageUrl}
-            alt={`Advent content for day ${window.day}`}
-            width={600}
-            height={400}
-            className="rounded-md object-cover"
-            data-ai-hint={window.imageHint}
-          />
-        </div>
+        {hasMedia && (
+            <div className="mt-4 aspect-video w-full">
+            {embedVideoUrl ? (
+                <iframe
+                src={embedVideoUrl}
+                title={`Advent content for day ${window.day}`}
+                className="w-full h-full rounded-md"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                />
+            ) : (
+                <Image
+                    src={window.imageUrl}
+                    alt={`Advent content for day ${window.day}`}
+                    width={600}
+                    height={400}
+                    className="rounded-md object-cover w-full h-full"
+                    data-ai-hint={window.imageHint}
+                />
+            )}
+            </div>
+        )}
       </DialogContent>
     </Dialog>
   );

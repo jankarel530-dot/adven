@@ -15,9 +15,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { updateWindow } from "@/lib/actions";
 import { CalendarWindow } from "@/lib/definitions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
+import { Bold, Italic } from "lucide-react";
 
 export default function WindowManagement({
   windows,
@@ -52,7 +53,8 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
   const [state, action] = useFormState(updateWindow, undefined);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-  
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
     if (state?.message) {
       if (state.errors) {
@@ -62,6 +64,28 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
       }
     }
   }, [state, toast, windowData.day]);
+  
+  const applyFormat = (tag: 'b' | 'i') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    const textBefore = textarea.value.substring(0, start);
+    const textAfter = textarea.value.substring(end);
+
+    const newText = `${textBefore}<${tag}>${selectedText}</${tag}>${textAfter}`;
+    
+    // This is a simplified way to update the value for React
+    const nativeTextareaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+    nativeTextareaSetter?.call(textarea, newText);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+    textarea.focus();
+    textarea.setSelectionRange(start + tag.length + 2, end + tag.length + 2);
+  };
+
 
   return (
     <form ref={formRef} action={action} className="grid gap-6 md:grid-cols-2">
@@ -70,7 +94,12 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
         
         <div>
           <Label htmlFor={`message-${windowData.day}`}>Zpráva</Label>
+          <div className="flex gap-2 mb-2">
+             <Button type="button" variant="outline" size="icon" onClick={() => applyFormat('b')}><Bold/></Button>
+             <Button type="button" variant="outline" size="icon" onClick={() => applyFormat('i')}><Italic/></Button>
+          </div>
           <Textarea
+            ref={textareaRef}
             id={`message-${windowData.day}`}
             name="message"
             defaultValue={windowData.message}
@@ -84,6 +113,16 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
             id={`imageUrl-${windowData.day}`}
             name="imageUrl"
             defaultValue={windowData.imageUrl}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor={`videoUrl-${windowData.day}`}>URL videa (YouTube)</Label>
+          <Input
+            id={`videoUrl-${windowData.day}`}
+            name="videoUrl"
+            defaultValue={windowData.videoUrl}
+            placeholder="např. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
           />
         </div>
         

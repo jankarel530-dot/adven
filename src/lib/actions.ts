@@ -94,6 +94,7 @@ const updateWindowSchema = z.object({
     day: z.coerce.number(),
     message: z.string().min(1, "Message cannot be empty"),
     imageUrl: z.string().url("Must be a valid URL"),
+    videoUrl: z.string().url("Must be a valid URL if provided").optional().or(z.literal('')),
     manualState: z.enum(["default", "unlocked", "locked"]),
 })
 
@@ -105,6 +106,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
     if (!validatedFields.success) {
         return {
             errors: validatedFields.error.flatten().fieldErrors,
+            message: "Validation failed."
         };
     }
     
