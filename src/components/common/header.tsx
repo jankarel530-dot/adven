@@ -14,7 +14,7 @@ export default function Header({ user }: HeaderProps) {
       <div className="container flex h-14 items-center">
         <div className="mr-4 flex items-center">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <Snowflake className="h-6 w-6 text-primary" />
+            <Snowflake className="h-6 w-6 text-destructive" />
             <span className="font-bold font-headline sm:inline-block">
               Adventní kalendář
             </span>
