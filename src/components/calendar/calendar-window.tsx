@@ -24,17 +24,6 @@ type CalendarWindowProps = {
   onOpen: (day: number) => void;
 };
 
-const numberColors = [
-  "text-red-500",
-  "text-rose-500",
-  "text-red-600",
-  "text-pink-500",
-  "text-red-700",
-  "text-rose-600",
-  "text-red-400",
-  "text-pink-600",
-];
-
 export default function CalendarWindow({
   window,
   isUnlocked,
@@ -55,7 +44,6 @@ export default function CalendarWindow({
   };
 
   const Icon = isUnlocked ? Gift : Lock;
-  const colorClass = numberColors[window.day % numberColors.length];
 
   const content = (
     <Card
@@ -76,7 +64,7 @@ export default function CalendarWindow({
         <Icon className="h-6 w-6 sm:h-8 sm:w-8" />
         <p className={cn(
           "text-2xl sm:text-4xl font-extrabold",
-          isUnlocked && !isOpened ? "text-destructive-foreground" : isOpened ? "text-muted-foreground" : colorClass
+          isUnlocked && !isOpened ? "text-destructive-foreground" : isOpened ? "text-muted-foreground" : "text-destructive"
         )}>
           {window.day}
         </p>
