@@ -29,16 +29,19 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     const handleOpen = () => {
-        if (isUnlocked) {
+        if (isUnlocked && !isOpened) {
             const audio = new Audio('/sounds/jingle.mp3');
             audio.play().catch(e => console.error("Error playing sound:", e));
             onOpen(window.day);
+        }
+        if (isUnlocked) {
             setIsDialogOpen(true);
         }
     };
 
   const Icon = isUnlocked ? Gift : Lock;
-  const iconColor = isUnlocked ? (isOpened ? 'text-primary/70' : 'text-accent') : 'text-muted-foreground';
+  const iconColor = isUnlocked ? (isOpened ? 'text-primary/70' : 'text-destructive') : 'text-muted-foreground';
+  const numberColor = isUnlocked ? (isOpened ? 'text-primary/70' : 'text-destructive') : 'text-primary';
 
   const content = (
     <Card
@@ -51,7 +54,7 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
     >
       <CardContent className="p-2 flex flex-col items-center justify-center gap-2 text-center">
         <Icon className={`h-6 w-6 sm:h-8 sm:w-8 ${iconColor}`} />
-        <p className={`text-2xl sm:text-4xl font-headline font-extrabold ${isOpened ? 'text-primary/70' : 'text-primary'}`}>{window.day}</p>
+        <p className={`text-2xl sm:text-4xl font-headline font-extrabold ${numberColor}`}>{window.day}</p>
       </CardContent>
     </Card>
   );
@@ -77,7 +80,7 @@ export default function CalendarWindow({ window, isUnlocked, isOpened, onOpen }:
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogTrigger asChild>{content}</DialogTrigger>
+      <DialogTrigger asChild>{isOpened ? content : <></>}</DialogTrigger>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
           <DialogTitle className="font-headline text-3xl flex items-center gap-2">
