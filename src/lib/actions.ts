@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { findUserByUsername, addUser as dbAddUser, updateWindow as dbUpdateWindow, deleteUser as dbDeleteUser } from "./data";
+import { findUserByUsername, addUser as dbAddUser, updateWindow as dbUpdateWindow, deleteUser as dbDeleteUser, initializeData } from "./data";
 import type { CalendarWindow } from "./definitions";
 
 const loginSchema = z.object({
@@ -125,5 +125,15 @@ export async function updateWindow(prevState: any, formData: FormData) {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
         return { message: `Failed to update window: ${errorMessage}` };
+    }
+}
+
+export async function initializeDatabaseAction() {
+    try {
+        const result = await initializeData();
+        return { message: result.message };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+        return { message: `Failed to initialize database: ${errorMessage}`, isError: true };
     }
 }
