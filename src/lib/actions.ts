@@ -13,10 +13,9 @@ import initialWindows from "./data/windows.json";
 // --- Vercel Edge Config Update Function ---
 
 // Extracts the Edge Config ID from the connection string
-function getEdgeConfigId() {
-    const connectionString = process.env.EDGE_CONFIG;
+function getEdgeConfigId(connectionString: string) {
     if (!connectionString) {
-        throw new Error("Missing EDGE_CONFIG environment variable.");
+        throw new Error("Missing connection string.");
     }
     try {
         const url = new URL(connectionString);
@@ -26,20 +25,23 @@ function getEdgeConfigId() {
         }
         return id;
     } catch (e) {
-        console.error("Invalid connection string URL, attempting direct parse", e);
         // Fallback for when the connection string is just the ID itself
         if (connectionString.startsWith('ecfg_')) {
             const idPart = connectionString.split('?')[0];
             const urlParts = idPart.split('/');
             return urlParts[urlParts.length - 1];
         }
-        throw new Error("Invalid EDGE_CONFIG connection string format.");
+        throw new Error("Invalid connection string format.");
     }
 }
 
 
 async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
-    const edgeConfigId = getEdgeConfigId();
+    const connectionString = process.env.EDGE_CONFIG;
+     if (!connectionString) {
+        throw new Error("Missing EDGE_CONFIG environment variable.");
+    }
+    const edgeConfigId = getEdgeConfigId(connectionString);
     const vercelToken = process.env.VERCEL_API_TOKEN;
 
     if (!vercelToken) {
@@ -104,8 +106,7 @@ export async function login(prevState: any, formData: FormData) {
   try {
     const users = await getUsers();
     
-    // Special case for initial setup if the database is empty
-    if (users.length === 0) {
+    if (!users || users.length === 0) {
       if (username === 'admin' && password === 'password') {
         console.log("Database is empty. Authenticating admin for initialization.");
         authenticatedUser = { id: "0", username: 'admin', role: 'admin' };
@@ -130,8 +131,6 @@ export async function login(prevState: any, formData: FormData) {
     return { message: "Neplatné uživatelské jméno nebo heslo." };
   }
   
-  // If authentication is successful, set the cookie and then redirect.
-  // This must be outside the try-catch block.
   cookies().set("session", authenticatedUser.username, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -139,11 +138,7 @@ export async function login(prevState: any, formData: FormData) {
     path: "/",
   });
 
-  if (authenticatedUser.role === 'admin') {
-    redirect("/admin");
-  } else {
-    redirect("/");
-  }
+  redirect("/");
 }
 
 export async function logout() {
