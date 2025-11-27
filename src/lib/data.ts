@@ -9,7 +9,6 @@ import type { User, CalendarWindow } from './definitions';
 function getClient() {
     const connectionString = process.env.EDGE_CONFIG;
     if (!connectionString) {
-        // This will provide a clear error if the environment variable is missing.
         throw new Error('@vercel/edge-config: No connection string provided. Please set the EDGE_CONFIG environment variable.');
     }
     return createClient(connectionString);
@@ -17,23 +16,32 @@ function getClient() {
 
 
 export async function getUsers(): Promise<User[]> {
-    const client = getClient();
-    const users = await client.get<User[]>('users');
-    // If the store is new and 'users' key doesn't exist, it returns undefined.
-    if (!users) {
-        console.log("No users found in Edge Config, returning empty array.");
-        return [];
+    try {
+        const client = getClient();
+        const users = await client.get<User[]>('users');
+        if (!users) {
+            console.log("No users found in Edge Config, returning empty array.");
+            return [];
+        }
+        return users;
+    } catch (error) {
+        console.error("Error fetching users from Edge Config:", error);
+        throw error; // Re-throw the error to be handled by the caller
     }
-    return users;
 }
 
 export async function getWindows(): Promise<CalendarWindow[]> {
-    const client = getClient();
-    const windows = await client.get<CalendarWindow[]>('windows');
-    if (!windows) {
-        console.log("No windows found in Edge Config, returning empty array.");
-        return [];
+    try {
+        const client = getClient();
+        const windows = await client.get<CalendarWindow[]>('windows');
+        if (!windows) {
+            console.log("No windows found in Edge Config, returning empty array.");
+            return [];
+        }
+        const sortedWindows = windows.sort((a, b) => a.day - b.day);
+        return sortedWindows;
+    } catch (error) {
+        console.error("Error fetching windows from Edge Config:", error);
+        throw error; // Re-throw the error to be handled by the caller
     }
-    const sortedWindows = windows.sort((a, b) => a.day - b.day);
-    return sortedWindows;
 }

@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -100,7 +101,6 @@ const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
 >(({ className, ...props }, ref) => {
-  // If dangerouslySetInnerHTML is used, render a div, otherwise use the primitive
   if (props.dangerouslySetInnerHTML) {
     return (
       <div

@@ -24,7 +24,6 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
         throw new Error("Missing VERCEL_API_TOKEN environment variable.");
     }
     
-    // Use the client to get the Edge Config ID
     const client = createClient(connectionString);
     const configId = await client.getConfigId();
     if (!configId) {
@@ -90,7 +89,6 @@ export async function login(prevState: any, formData: FormData) {
     const users = await getUsers();
     
     if (!users || users.length === 0) {
-        // If storage is empty, it can be initialized with default admin
         if (username === 'admin' && password === 'password') {
             console.log("Database is empty. Authenticating admin for initialization.");
             authenticatedUser = { id: "0", username: 'admin', role: 'admin', password: 'password' };
@@ -104,7 +102,6 @@ export async function login(prevState: any, formData: FormData) {
   } catch (error) {
     console.error("Login error during data fetching:", error);
      const errorMessage = error instanceof Error ? error.message : "Během přihlašování došlo k chybě serveru.";
-     // Return specific user-friendly messages for known issues
      if (errorMessage.includes("connection string")) {
          return { message: "Chyba připojení k databázi. Zkontrolujte nastavení proměnných prostředí na Vercelu." };
      }
@@ -179,7 +176,7 @@ export async function addUser(prevState: any, formData: FormData) {
   } catch (error) {
     console.error("Failed to add user:", error);
     const message = error instanceof Error ? error.message : "Nepodařilo se přidat uživatele.";
-    return { message, errors: { server: [message] } };
+    return { message, isError: true, errors: { server: [message] } };
   }
 }
 
@@ -237,7 +234,6 @@ export async function updateWindow(prevState: any, formData: FormData) {
       return { message: "Okénko nebylo nalezeno." };
     }
     
-    // Update the window data
     windows[windowIndex] = { ...windows[windowIndex], ...dataToUpdate };
 
     await updateEdgeConfig('windows', windows);
@@ -255,10 +251,9 @@ export async function initializeDatabaseAction() {
     try {
         console.log("Initializing database with data from JSON files...");
         await updateEdgeConfig('users', initialUsers);
-        await updateEdge činnost s 'windows', initialWindows);
+        await updateEdgeConfig('windows', initialWindows);
         console.log("Database initialized successfully.");
         
-        // Use 'layout' revalidation to be sure all data is fresh
         revalidatePath('/admin', 'layout');
         revalidatePath('/', 'layout');
 

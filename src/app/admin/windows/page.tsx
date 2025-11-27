@@ -1,3 +1,4 @@
+
 import WindowManagement from "@/components/admin/window-management";
 import { getWindows } from "@/lib/data";
 
