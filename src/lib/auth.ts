@@ -2,16 +2,16 @@
 import 'server-only'
 import { cookies } from 'next/headers'
 import type { User } from './definitions'
-import { get } from '@vercel/edge-config';
+import { getUsers } from './data';
 
 export async function getSession(): Promise<Omit<User, 'password'> | null> {
   const sessionCookie = cookies().get('session')?.value
   if (!sessionCookie) return null;
 
   try {
-    const users = await get<User[]>('users');
+    const users = await getUsers();
     if (!users) {
-        console.warn("User data not found in Edge Config during session check.");
+        console.warn("User data not found.");
         return null;
     }
     const user = users.find(u => u.username === sessionCookie);
@@ -22,7 +22,7 @@ export async function getSession(): Promise<Omit<User, 'password'> | null> {
     const { password, ...userWithoutPassword } = user as User;
     return userWithoutPassword
   } catch (error) {
-    console.error("Error fetching session from Edge Config:", error);
+    console.error("Error fetching session:", error);
     return null;
   }
 }

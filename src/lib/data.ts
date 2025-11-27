@@ -3,15 +3,19 @@ import 'server-only';
 import { get } from '@vercel/edge-config';
 import type { User, CalendarWindow } from './definitions';
 
-// These functions read data from Vercel's Edge Config store.
-// The data is written via server actions in `actions.ts`.
+// These functions now read data from Vercel Edge Config.
+// The data is stored as JSON strings under the keys 'users' and 'windows'.
 
 export async function getUsers(): Promise<User[]> {
     try {
         const users = await get<User[]>('users');
-        return users ? JSON.parse(JSON.stringify(users)) : [];
+        if (!users) {
+            console.log("No users found in Edge Config, returning empty array.");
+            return [];
+        }
+        return users;
     } catch (error) {
-        console.warn("Could not fetch users from Edge Config. This might be expected if data hasn't been initialized yet.");
+        console.error("Error fetching users from Edge Config:", error);
         return [];
     }
 }
@@ -19,11 +23,14 @@ export async function getUsers(): Promise<User[]> {
 export async function getWindows(): Promise<CalendarWindow[]> {
     try {
         const windows = await get<CalendarWindow[]>('windows');
-        if (!windows) return [];
+        if (!windows) {
+            console.log("No windows found in Edge Config, returning empty array.");
+            return [];
+        }
         const sortedWindows = windows.sort((a, b) => a.day - b.day);
-        return JSON.parse(JSON.stringify(sortedWindows));
+        return sortedWindows;
     } catch (error) {
-        console.warn("Could not fetch windows from Edge Config. This might be expected if data hasn't been initialized yet.");
+        console.error("Error fetching windows from Edge Config:", error);
         return [];
     }
 }

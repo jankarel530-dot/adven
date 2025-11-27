@@ -5,26 +5,56 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { CalendarWindow, User } from "./definitions";
-import { create, get } from '@vercel/edge-config';
-import initialUsers from './data/users.json';
-import initialWindows from './data/windows.json';
+import type { User, CalendarWindow } from "./definitions";
+import { getUsers, getWindows } from "./data";
+import initialUsers from "./data/users.json";
+import initialWindows from "./data/windows.json";
 
-// --- Vercel Edge Config Helpers ---
+// --- Vercel Edge Config Update Function ---
 
-async function getEdgeConfigData<T>(key: string): Promise<T> {
-    // Vercel injects the EDGE_CONFIG environment variable automatically
-    const data = await get<T>(key);
-    if (data === undefined) {
-        throw new Error(`Data for key "${key}" not found in Edge Config.`);
+async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
+    const edgeConfigId = process.env.EDGE_CONFIG_ID;
+    const vercelToken = process.env.VERCEL_API_TOKEN;
+
+    if (!edgeConfigId || !vercelToken) {
+        throw new Error("Missing Vercel environment variables for Edge Config update.");
     }
-    return data;
-}
 
-async function updateEdgeConfigData<T>(key: string, data: T): Promise<void> {
-    await create({
-        [key]: data,
+    const url = `https://api.vercel.com/v1/edge-config/${edgeConfigId}/items`;
+
+    const response = await fetch(url, {
+        method: "PATCH",
+        headers: {
+            Authorization: `Bearer ${vercelToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            items: [
+                {
+                    operation: "update",
+                    key: key,
+                    value: data,
+                },
+            ],
+        }),
     });
+
+    if (!response.ok) {
+        const errorBody = await response.json();
+        console.error("Failed to update Edge Config:", errorBody);
+        throw new Error(`Failed to update Edge Config: ${errorBody.error.message}`);
+    }
+
+    // Revalidate paths to reflect changes immediately
+    if (key === 'users') {
+        revalidatePath('/admin/users');
+    }
+    if (key === 'windows') {
+        revalidatePath('/admin/windows');
+        revalidatePath('/');
+    }
+
+    return await response.json();
 }
 
 
@@ -49,7 +79,7 @@ export async function login(prevState: any, formData: FormData) {
   const { username, password } = validatedFields.data;
 
   try {
-    const users = await getEdgeConfigData<User[]>('users');
+    const users = await getUsers();
     const user = users.find(u => u.username === username);
 
     if (!user || user.password !== password) {
@@ -64,8 +94,8 @@ export async function login(prevState: any, formData: FormData) {
     });
   } catch (error) {
     console.error("Login error:", error);
-    if (error instanceof Error && error.message.includes("not found in Edge Config")) {
-        return { message: "Data v aplikaci ještě nebyla inicializována. Požádejte administrátora, aby resetoval data." };
+    if (error instanceof Error) {
+        return { message: error.message };
     }
     return { message: "Během přihlášení došlo k neočekávané chybě." };
   }
@@ -79,129 +109,137 @@ export async function logout() {
 }
 
 
-// --- DATA-MODIFYING ACTIONS ---
+// --- ADMIN ACTIONS ---
 
-const addUserSchema = z.object({
-  username: z.string().min(3, "Uživatelské jméno musí mít alespoň 3 znaky"),
-  password: z.string().min(6, "Heslo musí mít alespoň 6 znaků"),
+const userSchema = z.object({
+  username: z.string().min(3, "Uživatelské jméno musí mít alespoň 3 znaky."),
+  password: z.string().min(4, "Heslo musí mít alespoň 4 znaky."),
 });
 
 export async function addUser(prevState: any, formData: FormData) {
-  const validatedFields = addUserSchema.safeParse(
+  const validatedFields = userSchema.safeParse(
     Object.fromEntries(formData.entries())
   );
 
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Ověření se nezdařilo."
+      message: "Zkontrolujte zadané údaje.",
     };
   }
 
-  try {
-    const users = await getEdgeConfigData<User[]>('users');
-    const { username, password } = validatedFields.data;
+  const { username, password } = validatedFields.data;
 
-    if (users.some(u => u.username === username)) {
-      return { message: "Uživatelské jméno již existuje", errors: { username: ["Uživatelské jméno je již obsazené"] } };
+  try {
+    const users = await getUsers();
+
+    if (users.find(u => u.username === username)) {
+      return {
+        errors: { username: ["Uživatel s tímto jménem již existuje."] },
+        message: "Uživatel s tímto jménem již existuje.",
+      };
     }
 
     const newUser: User = {
-      id: String(Date.now()),
+      id: new Date().getTime().toString(),
       username,
       password,
-      role: 'user',
+      role: "user",
     };
-    const updatedUsers = [...users, newUser];
 
-    await updateEdgeConfigData('users', updatedUsers);
+    const updatedUsers = [...users, newUser];
+    await updateEdgeConfig('users', updatedUsers);
+    
     revalidatePath("/admin/users");
     return { message: `Uživatel ${username} byl úspěšně vytvořen.` };
   } catch (error) {
-    console.error("Add user error:", error);
-    return { message: "Nepodařilo se vytvořit uživatele.", errors: {} };
+    console.error("Failed to add user:", error);
+    return { message: "Nepodařilo se přidat uživatele." };
   }
 }
 
 export async function deleteUserAction(id: string) {
     try {
-      const users = await getEdgeConfigData<User[]>('users');
-      const userToDelete = users.find(u => u.id === id);
-      if (!userToDelete) {
-        return { message: "Uživatel nenalezen", isError: true };
-      }
-      if (userToDelete.role === 'admin') {
-        return { message: "Nelze smazat administrátora", isError: true };
-      }
-      
-      const updatedUsers = users.filter(u => u.id !== id);
-      await updateEdgeConfigData('users', updatedUsers);
-      
-      revalidatePath('/admin/users');
-      return { message: 'Uživatel úspěšně smazán.', isError: false };
+        let users = await getUsers();
+        const userToDelete = users.find(u => u.id === id);
+
+        if (!userToDelete) {
+            return { isError: true, message: "Uživatel nenalezen." };
+        }
+        if (userToDelete.role === 'admin') {
+            return { isError: true, message: "Nelze smazat administrátora." };
+        }
+
+        const updatedUsers = users.filter(u => u.id !== id);
+        await updateEdgeConfig('users', updatedUsers);
+        
+        revalidatePath('/admin/users');
+        return { isError: false, message: `Uživatel ${userToDelete.username} byl smazán.` };
     } catch (error) {
-       console.error("Delete user error:", error);
-       return { message: 'Nepodařilo se smazat uživatele.', isError: true };
+        console.error('Failed to delete user:', error);
+        return { isError: true, message: 'Nepodařilo se smazat uživatele.' };
     }
 }
 
-
-const updateWindowSchema = z.object({
-    day: z.coerce.number(),
-    message: z.string().min(1, "Zpráva nesmí být prázdná"),
-    imageUrl: z.string().url("Musí být platná URL, pokud je zadána").optional().or(z.literal('')),
-    videoUrl: z.string().url("Musí být platná URL, pokud je zadána").optional().or(z.literal('')),
-    manualState: z.enum(["default", "unlocked", "locked"]),
+const windowSchema = z.object({
+  day: z.coerce.number().int().min(1).max(24),
+  message: z.string().optional(),
+  imageUrl: z.string().url().or(z.literal("")),
+  videoUrl: z.string().url().or(z.literal("")),
+  manualState: z.enum(["default", "unlocked", "locked"]),
 });
 
 export async function updateWindow(prevState: any, formData: FormData) {
-    const validatedFields = updateWindowSchema.safeParse(
-        Object.fromEntries(formData.entries())
-    );
+  const validatedFields = windowSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
 
-    if (!validatedFields.success) {
-        return {
-            errors: validatedFields.error.flatten().fieldErrors,
-            message: "Ověření se nezdařilo."
-        };
+  if (!validatedFields.success) {
+    console.error("Window validation failed:", validatedFields.error.flatten());
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "Neplatná data pro okénko.",
+    };
+  }
+  
+  const { day, ...dataToUpdate } = validatedFields.data;
+
+  try {
+    let windows = await getWindows();
+    const windowIndex = windows.findIndex(w => w.day === day);
+
+    if (windowIndex === -1) {
+      return { message: "Okénko nebylo nalezeno." };
     }
     
-    const { day, ...data } = validatedFields.data;
+    // Update the window data
+    windows[windowIndex] = { ...windows[windowIndex], ...dataToUpdate };
+
+    await updateEdgeConfig('windows', windows);
     
-    try {
-        const windows = await getEdgeConfigData<CalendarWindow[]>('windows');
-        const windowIndex = windows.findIndex(w => w.day === day);
-        if (windowIndex === -1) {
-            return { message: "Okénko nebylo nalezeno." };
-        }
-
-        const existingWindow = windows[windowIndex];
-        const imageHint = data.imageUrl === existingWindow.imageUrl ? existingWindow.imageHint : 'custom image';
-        
-        windows[windowIndex] = { ...existingWindow, ...data, imageHint };
-
-        await updateEdgeConfigData('windows', windows);
-
-        revalidatePath("/admin/windows");
-        revalidatePath("/");
-        return { message: `Okénko pro den ${day} bylo aktualizováno.` };
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Došlo k neznámé chybě";
-        console.error("Update window error:", error);
-        return { message: `Nepodařilo se aktualizovat okénko: ${errorMessage}` };
-    }
+    revalidatePath("/admin/windows");
+    revalidatePath("/");
+    return { message: `Den ${day} byl úspěšně upraven.` };
+  } catch (error) {
+    console.error("Failed to update window:", error);
+    return { message: `Nepodařilo se upravit den ${day}.` };
+  }
 }
 
 export async function initializeDatabaseAction() {
     try {
-      await updateEdgeConfigData('users', initialUsers);
-      await updateEdgeConfigData('windows', initialWindows);
+        console.log("Initializing database with data from JSON files...");
+        await updateEdgeConfig('users', initialUsers);
+        await updateEdgeConfig('windows', initialWindows);
+        console.log("Database initialized successfully.");
+        
+        revalidatePath('/admin/users');
+        revalidatePath('/admin/windows');
+        revalidatePath('/');
 
-      revalidatePath('/admin', 'layout');
-      revalidatePath('/', 'layout');
-      return { success: true };
-    } catch(e) {
-      console.error(e);
-      return { success: false };
+        return { isError: false, message: "Data byla úspěšně resetována." };
+    } catch (error) {
+        console.error('Failed to initialize database:', error);
+        return { isError: true, message: "Nepodařilo se resetovat data." };
     }
 }

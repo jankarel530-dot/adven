@@ -1,8 +1,9 @@
-'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+"use client";
+
+import { useTransition } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,48 +14,55 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { initializeDatabaseAction } from '@/lib/actions';
+} from "@/components/ui/alert-dialog";
+import { initializeDatabaseAction } from "@/lib/actions";
 
 export default function InitializeButton() {
-  const [loading, setLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  const handleInitialize = async () => {
-    setLoading(true);
-    const result = await initializeDatabaseAction();
-    if (result.success) {
-      toast({
-          title: 'Úspěch',
-          description: 'Data byla úspěšně resetována do výchozího stavu v úložišti Vercel.',
-      });
-    } else {
-       toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se resetovat data. Zkontrolujte, zda je projekt propojen s Vercel Edge Config Store.',
-        variant: 'destructive',
-      });
-    }
-    setLoading(false);
+  const handleInitialize = () => {
+    startTransition(async () => {
+      const result = await initializeDatabaseAction();
+      if (result.isError) {
+        toast({
+          title: "Chyba",
+          description: result.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Úspěch",
+          description: result.message,
+        });
+      }
+    });
   };
 
   return (
-     <AlertDialog>
+    <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="destructive" disabled={loading}>
-            {loading ? 'Inicializace...' : 'Resetovat data'}
+        <Button variant="destructive" disabled={isPending}>
+          {isPending ? "Resetování..." : "Resetovat Data"}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Jste si jisti?</AlertDialogTitle>
+          <AlertDialogTitle>Jste si absolutně jisti?</AlertDialogTitle>
           <AlertDialogDescription>
-            Tato akce přepíše veškeré aktuální změny (uživatele i okénka) v úložišti Vercel a vrátí je do výchozího stavu, který je definován v kódu. Tuto akci použijte, pokud chcete začít znovu.
+            Tato akce trvale přepíše veškerá aktuální data (uživatele a okénka) v úložišti
+            výchozími hodnotami z projektu. Tuto akci nelze vrátit zpět.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Zrušit</AlertDialogCancel>
-          <AlertDialogAction onClick={handleInitialize}>Ano, resetovat</AlertDialogAction>
+          <AlertDialogAction
+            onClick={handleInitialize}
+            disabled={isPending}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Ano, resetovat data
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
