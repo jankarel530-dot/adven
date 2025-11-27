@@ -12,11 +12,14 @@ const WINDOWS_BLOB_NAME = 'windows.json';
 
 // Helper to get the base URL for the API
 function getBaseUrl() {
+    if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+        return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+    }
     if (process.env.VERCEL_URL) {
         return `https://${process.env.VERCEL_URL}`;
     }
-    // Assume localhost for development
-    return 'http://localhost:9002'; 
+    // Fallback for local development or other environments
+    return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
 }
 
 // Helper function to write data to Vercel Blob via our API route
@@ -36,6 +39,7 @@ async function setBlobData<T>(fileName: string, data: T): Promise<void> {
                 'x-api-token': process.env.BLOB_API_TOKEN,
             },
             body: JSON.stringify(data, null, 2),
+            cache: 'no-store'
         });
 
         if (!response.ok) {
