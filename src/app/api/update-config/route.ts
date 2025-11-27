@@ -5,6 +5,10 @@ import { update } from '@vercel/edge-config';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
+  if (request.method !== 'POST') {
+    return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
+  }
+  
   const { key, value } = await request.json();
   const apiToken = request.headers.get('x-api-token');
 
@@ -21,11 +25,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    await update(key, value, {
-      connectionString: process.env.EDGE_CONFIG,
-    });
+    await update(key, value);
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error('Failed to update Edge Config from API route:', error);
     return NextResponse.json({ error: `Failed to update Edge Config: ${error.message}` }, { status: 500 });
   }
 }

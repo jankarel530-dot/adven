@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
@@ -50,12 +51,21 @@ export default function WindowManagement({
 }
 
 const getEmbedUrl = (url: string) => {
-    if (url.includes("youtube.com/watch?v=")) {
-      const videoId = url.split("v=")[1].split('&')[0];
-      return `https://www.youtube.com/embed/${videoId}`;
+    if (!url) return '';
+    try {
+      if (url.includes("youtube.com/watch?v=")) {
+        const videoId = new URL(url).searchParams.get('v');
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
+      }
+      if (url.includes("youtu.be/")) {
+        const videoId = new URL(url).pathname.slice(1);
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
+      }
+    } catch (e) {
+      console.error("Invalid video URL", e);
+      return '';
     }
-    // Add other video platforms if needed
-    return url;
+    return '';
 };
 
 function WindowForm({ windowData }: { windowData: CalendarWindow }) {
@@ -64,8 +74,8 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
   const formRef = useRef<HTMLFormElement>(null);
   
   // States for controlled components
-  const [message, setMessage] = useState(windowData.message);
-  const [imageUrl, setImageUrl] = useState(windowData.imageUrl);
+  const [message, setMessage] = useState(windowData.message || '');
+  const [imageUrl, setImageUrl] = useState(windowData.imageUrl || '');
   const [videoUrl, setVideoUrl] = useState(windowData.videoUrl || '');
 
   useEffect(() => {
@@ -90,7 +100,6 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
         const newText = `${textarea.value.substring(0, start)}<${tag}>${selectedText}</${tag}>${textarea.value.substring(end)}`;
         setMessage(newText);
         
-        // Focus and select the text inside the new tags
         textarea.focus();
         setTimeout(() => {
             textarea.setSelectionRange(start + tag.length + 2, end + tag.length + 2);
@@ -98,8 +107,7 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
     }
   };
 
-  const embedVideoUrl = videoUrl ? getEmbedUrl(videoUrl) : null;
-
+  const embedVideoUrl = getEmbedUrl(videoUrl);
 
   return (
     <form ref={formRef} action={action} className="grid gap-6 md:grid-cols-2">
@@ -153,7 +161,7 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
         
         <div>
           <Label>Manuální ovládání</Label>
-          <RadioGroup name="manualState" defaultValue={windowData.manualState} className="mt-2">
+          <RadioGroup name="manualState" defaultValue={windowData.manualState || 'default'} className="mt-2">
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="default" id={`default-${windowData.day}`} />
               <Label htmlFor={`default-${windowData.day}`}>Výchozí (podle data)</Label>
@@ -175,6 +183,7 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
         <div className="flex items-center justify-center bg-muted/50 rounded-md aspect-video">
             {embedVideoUrl ? (
                 <iframe
+                    key={embedVideoUrl} // Force re-render on URL change
                     src={embedVideoUrl}
                     title={`Preview for day ${windowData.day}`}
                     className="w-full h-full rounded-md"

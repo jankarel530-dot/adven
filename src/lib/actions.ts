@@ -10,6 +10,7 @@ import { getUsers, getWindows } from "./data";
 
 async function updateEdgeConfig<T>(key: 'users' | 'windows', value: T) {
     const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:9002';
+    
     const response = await fetch(`${baseUrl}/api/update-config`, {
         method: "POST",
         headers: {
@@ -21,7 +22,7 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', value: T) {
 
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update Edge Config");
+        throw new Error(errorData.error || "Failed to update Edge Config via API");
     }
 }
 
@@ -183,7 +184,9 @@ export async function updateWindow(prevState: any, formData: FormData) {
       return { message: "Okénko nebylo nalezeno." };
     }
     
-    windows[windowIndex] = { ...windows[windowIndex], ...dataToUpdate };
+    // Preserve imageHint when updating
+    const existingWindow = windows[windowIndex];
+    windows[windowIndex] = { ...existingWindow, ...dataToUpdate };
 
     await updateEdgeConfig('windows', windows);
     

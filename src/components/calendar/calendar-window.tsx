@@ -24,6 +24,25 @@ type CalendarWindowProps = {
   onOpen: (day: number) => void;
 };
 
+const getEmbedUrl = (url: string) => {
+    if (!url) return null;
+    try {
+      if (url.includes("youtube.com/watch?v=")) {
+        const videoId = new URL(url).searchParams.get('v');
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+      }
+      if (url.includes("youtu.be/")) {
+        const videoId = new URL(url).pathname.slice(1);
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+      }
+    } catch (e) {
+      console.error("Invalid video URL", e);
+      return null;
+    }
+    return null;
+};
+
+
 export default function CalendarWindow({
   window,
   isUnlocked,
@@ -35,8 +54,12 @@ export default function CalendarWindow({
   const handleOpen = () => {
     if (isUnlocked) {
       if (!isOpened) {
-        const audio = new Audio("/sounds/jingle.mp3");
-        audio.play().catch((e) => console.error("Error playing sound:", e));
+        try {
+          const audio = new Audio("/sounds/jingle.mp3");
+          audio.play().catch((e) => console.error("Error playing sound:", e));
+        } catch (e) {
+            console.error("Could not play sound", e)
+        }
         onOpen(window.day);
       }
       setIsDialogOpen(true);
@@ -81,15 +104,7 @@ export default function CalendarWindow({
       </div>
     );
   }
-
-  const getEmbedUrl = (url: string) => {
-    if (url.includes("youtube.com/watch?v=")) {
-      const videoId = url.split("v=")[1].split("&")[0];
-      return `https://www.youtube.com/embed/${videoId}`;
-    }
-    return url;
-  };
-
+  
   const hasMedia = window.imageUrl || window.videoUrl;
   const embedVideoUrl = window.videoUrl ? getEmbedUrl(window.videoUrl) : null;
 

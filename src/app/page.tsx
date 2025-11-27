@@ -1,8 +1,11 @@
+
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { getWindows } from "@/lib/data";
 import Header from "@/components/common/header";
 import AdventCalendar from "@/components/calendar/advent-calendar";
+
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   const user = await getSession();
