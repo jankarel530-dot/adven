@@ -78,49 +78,47 @@ export async function login(prevState: any, formData: FormData) {
   }
   
   const { username, password } = validatedFields.data;
+  let authenticatedUser: Pick<User, 'username' | 'role'> | null = null;
+  let errorState: { message: string } | null = null;
 
   try {
     const users = await getUsers();
     
-    // **Temporary login fix for initial setup**
-    // If no users exist in the database, allow the default admin to log in
-    // to initialize the database.
+    // Special case for initial setup if the database is empty
     if (users.length === 0 && username === 'admin' && password === 'password') {
-        console.log("Database is empty. Performing one-time login for admin to initialize.");
-        cookies().set("session", "admin", {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            maxAge: 60 * 60 * 24 * 7, // One week
-            path: "/",
-        });
-        redirect("/admin");
-    } 
-
-    const user = users.find(u => u.username === username);
-
-    if (!user || user.password !== password) {
-      return { message: "Neplatné uživatelské jméno nebo heslo" };
-    }
-
-    cookies().set("session", user.username, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7, // One week
-      path: "/",
-    });
-    
-    if (user.role === 'admin') {
-        redirect("/admin");
+        console.log("Database is empty. Authenticating admin for initialization.");
+        authenticatedUser = { username: 'admin', role: 'admin' };
     } else {
-        redirect("/");
+        const user = users.find(u => u.username === username);
+        if (!user || user.password !== password) {
+          errorState = { message: "Neplatné uživatelské jméno nebo heslo" };
+        } else {
+          authenticatedUser = { username: user.username, role: user.role };
+        }
     }
-
   } catch (error) {
     console.error("Login error:", error);
-    if (error instanceof Error) {
-        return { message: error.message };
-    }
-    return { message: "Během přihlášení došlo k neočekávané chybě." };
+    const errorMessage = error instanceof Error ? error.message : "Během přihlášení došlo k neočekávané chybě.";
+    errorState = { message: errorMessage };
+  }
+
+  // If there was an error or authentication failed, return the message
+  if (errorState || !authenticatedUser) {
+    return errorState || { message: "Ověření se nezdařilo." };
+  }
+
+  // If authentication was successful, set the cookie and redirect
+  cookies().set("session", authenticatedUser.username, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 7, // One week
+    path: "/",
+  });
+
+  if (authenticatedUser.role === 'admin') {
+    redirect("/admin");
+  } else {
+    redirect("/");
   }
 }
 
