@@ -1,8 +1,9 @@
 'use client';
 
+// This component is no longer needed as data is file-based.
+// It is kept for potential future use but is currently non-functional for production.
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { initializeDatabaseAction } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -22,22 +23,12 @@ export default function InitializeButton() {
 
   const handleInitialize = async () => {
     setLoading(true);
-    try {
-      const result = await initializeDatabaseAction();
-      toast({
-        title: 'Inicializace dokončena',
-        description: result.message,
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Neznámá chyba";
-      toast({
-        title: 'Chyba při inicializaci',
-        description: `Došlo k chybě: ${errorMessage}`,
+    toast({
+        title: 'Akce není podporována',
+        description: 'Inicializace databáze byla nahrazena přímou editací souborů. Tento prvek je zde ponechán pro případ budoucího rozšíření.',
         variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+    });
+    setLoading(false);
   };
 
   return (
@@ -49,16 +40,13 @@ export default function InitializeButton() {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Jste si jisti?</AlertDialogTitle>
+          <AlertDialogTitle>Akce není podporována</AlertDialogTitle>
           <AlertDialogDescription>
-            Tato akce se pokusí naplnit databázi výchozími daty. Pokud databáze již data obsahuje, nic se nestane. Tuto akci je bezpečné spustit, ale obvykle je potřeba pouze jednou.
+            S přechodem na souborové úložiště byla tato funkce deaktivována. Výchozí data jsou nyní přímo v souborech `users.json` a `windows.json`. Tento prvek je zde ponechán pro případ budoucího rozšíření.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Zrušit</AlertDialogCancel>
-          <AlertDialogAction onClick={handleInitialize} disabled={loading}>
-            {loading ? 'Probíhá...' : 'Ano, inicializovat'}
-          </AlertDialogAction>
+          <AlertDialogCancel>Rozumím</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

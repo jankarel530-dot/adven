@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { findUserByUsername, addUser as dbAddUser, updateWindow as dbUpdateWindow, deleteUser as dbDeleteUser, initializeData } from "./data";
+import { findUserByUsername, addUser as dbAddUser, updateWindow as dbUpdateWindow, deleteUser as dbDeleteUser } from "./data";
 import type { CalendarWindow } from "./definitions";
 
 const loginSchema = z.object({
@@ -32,8 +32,6 @@ export async function login(prevState: any, formData: FormData) {
       return { message: "Invalid username or password" };
     }
 
-    // In a real app, you'd create a secure, encrypted JWT.
-    // For this scaffold, we store the username in the cookie.
     cookies().set("session", user.username, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -111,11 +109,9 @@ export async function updateWindow(prevState: any, formData: FormData) {
         };
     }
 
+    // This is a bit of a hack to get the imageHint.
+    // Ideally, this would be part of the form, but for now we'll read it from the existing data.
     const { day, ...data } = validatedFields.data;
-
-    if (!data.imageUrl && !data.videoUrl) {
-      // You can decide if at least one is required, for now we allow both to be empty
-    }
     
     try {
         await dbUpdateWindow(day, data as Partial<CalendarWindow>);
@@ -125,15 +121,5 @@ export async function updateWindow(prevState: any, formData: FormData) {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
         return { message: `Failed to update window: ${errorMessage}` };
-    }
-}
-
-export async function initializeDatabaseAction() {
-    try {
-        const result = await initializeData();
-        return { message: result.message };
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-        return { message: `Failed to initialize database: ${errorMessage}`, isError: true };
     }
 }

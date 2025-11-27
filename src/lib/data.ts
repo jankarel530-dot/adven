@@ -1,137 +1,127 @@
 import 'server-only';
-import { db } from './firebase';
-import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  writeBatch,
-} from 'firebase/firestore';
+import fs from 'fs/promises';
+import path from 'path';
 import type { User, CalendarWindow } from './definitions';
-import initialUsers from './data/users.json';
-import initialWindows from './data/windows.json';
 
-const usersCollection = collection(db, 'users');
-const windowsCollection = collection(db, 'windows');
+// This flag is used to prevent multiple reads in a single request lifecycle
+let memoryCache = {
+    users: null as User[] | null,
+    windows: null as CalendarWindow[] | null,
+};
 
-// --- Initialization ---
-export async function initializeData() {
-  const usersSnapshot = await getDocs(usersCollection);
-  const windowsSnapshot = await getDocs(windowsCollection);
+const usersPath = path.join(process.cwd(), 'src', 'lib', 'data', 'users.json');
+const windowsPath = path.join(process.cwd(), 'src', 'lib', 'data', 'windows.json');
 
-  const batch = writeBatch(db);
-  let operationsCount = 0;
+async function readUsersFile(): Promise<User[]> {
+    if (process.env.NODE_ENV === 'development' && memoryCache.users) {
+        return memoryCache.users;
+    }
+    try {
+        const fileContent = await fs.readFile(usersPath, 'utf-8');
+        const users: User[] = JSON.parse(fileContent);
+        memoryCache.users = users;
+        return users;
+    } catch (error) {
+        console.error("Could not read users.json. Returning empty array.", error);
+        return [];
+    }
+}
 
-  if (usersSnapshot.empty) {
-    console.log('Initializing users collection...');
-    initialUsers.forEach(user => {
-      // We don't specify an ID, so Firestore generates one.
-      const userRef = doc(usersCollection);
-      batch.set(userRef, user);
-      operationsCount++;
-    });
-  }
+async function writeUsersFile(users: User[]): Promise<void> {
+    await fs.writeFile(usersPath, JSON.stringify(users, null, 2), 'utf-8');
+    memoryCache.users = null; // Invalidate cache
+}
 
-  if (windowsSnapshot.empty) {
-    console.log('Initializing windows collection...');
-    initialWindows.forEach(windowData => {
-      // Use 'day' as the document ID for windows for easy lookup.
-      const windowRef = doc(db, 'windows', String(windowData.day));
-      batch.set(windowRef, windowData);
-      operationsCount++;
-    });
-  }
+async function readWindowsFile(): Promise<CalendarWindow[]> {
+    if (process.env.NODE_ENV === 'development' && memoryCache.windows) {
+        return memoryCache.windows;
+    }
+    try {
+        const fileContent = await fs.readFile(windowsPath, 'utf-8');
+        const windows: CalendarWindow[] = JSON.parse(fileContent);
+        memoryCache.windows = windows;
+        return windows;
+    } catch (error) {
+        console.error("Could not read windows.json. Returning empty array.", error);
+        return [];
+    }
+}
 
-  if (operationsCount > 0) {
-    await batch.commit();
-    console.log('Firestore initialized successfully.');
-    return { message: 'Firestore initialized successfully.' };
-  }
-
-  return { message: 'Firestore already contains data. No action taken.' };
+async function writeWindowsFile(windows: CalendarWindow[]): Promise<void> {
+    await fs.writeFile(windowsPath, JSON.stringify(windows, null, 2), 'utf-8');
+    memoryCache.windows = null; // Invalidate cache
 }
 
 
 // --- User Management ---
 export async function getUsers(): Promise<User[]> {
-  const snapshot = await getDocs(usersCollection);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+    return await readUsersFile();
 }
 
-export async function findUserByUsername(
-  username: string
-): Promise<User | undefined> {
-  const q = query(usersCollection, where('username', '==', username));
-  const snapshot = await getDocs(q);
-  if (snapshot.empty) {
-    return undefined;
-  }
-  const userDoc = snapshot.docs[0];
-  return { id: userDoc.id, ...userDoc.data() } as User;
+export async function findUserByUsername(username: string): Promise<User | undefined> {
+    const users = await readUsersFile();
+    return users.find(u => u.username === username);
 }
 
 export async function addUser(user: Omit<User, 'id' | 'role'>): Promise<User> {
-  const newUser = {
-    ...user,
-    role: 'user',
-  };
-  const docRef = await addDoc(usersCollection, newUser);
-  return { id: docRef.id, ...newUser };
+    const users = await readUsersFile();
+    const newUser: User = {
+        id: String(Date.now()), // Simple unique ID
+        role: 'user',
+        ...user,
+    };
+    users.push(newUser);
+    await writeUsersFile(users);
+    return newUser;
 }
 
-export async function deleteUser(
-  id: string
-): Promise<{ message: string } | null> {
-  const userRef = doc(db, 'users', id);
-  const userDoc = await getDoc(userRef);
+export async function deleteUser(id: string): Promise<{ message: string } | null> {
+    let users = await readUsersFile();
+    const userToDelete = users.find(u => u.id === id);
 
-  if (!userDoc.exists()) {
-    return { message: 'User not found' };
-  }
+    if (!userToDelete) {
+        return { message: "User not found" };
+    }
+    if (userToDelete.role === 'admin') {
+        return { message: "Cannot delete admin user" };
+    }
 
-  if (userDoc.data().role === 'admin') {
-    return { message: 'Cannot delete admin user' };
-  }
-
-  await deleteDoc(userRef);
-  return null;
+    users = users.filter(u => u.id !== id);
+    await writeUsersFile(users);
+    return null;
 }
+
 
 // --- Window Management ---
 export async function getWindows(): Promise<CalendarWindow[]> {
-  const snapshot = await getDocs(windowsCollection);
-  const windows = snapshot.docs.map(doc => doc.data() as CalendarWindow);
-  // Sort by day just in case Firestore doesn't return them in order
-  windows.sort((a, b) => a.day - b.day);
-  return windows;
+    const windows = await readWindowsFile();
+    // Sort by day to be safe
+    windows.sort((a, b) => a.day - b.day);
+    return windows;
 }
 
-export async function getWindowByDay(
-  day: number
-): Promise<CalendarWindow | undefined> {
-  const windowRef = doc(db, 'windows', String(day));
-  const docSnap = await getDoc(windowRef);
-  if (docSnap.exists()) {
-    return docSnap.data() as CalendarWindow;
-  }
-  return undefined;
+export async function getWindowByDay(day: number): Promise<CalendarWindow | undefined> {
+    const windows = await readWindowsFile();
+    return windows.find(w => w.day === day);
 }
 
-export async function updateWindow(
-  day: number,
-  data: Partial<Omit<CalendarWindow, 'day'>>
-): Promise<CalendarWindow | null> {
-  const windowRef = doc(db, 'windows', String(day));
-  await updateDoc(windowRef, data);
-  
-  const updatedDoc = await getDoc(windowRef);
-  if (updatedDoc.exists()) {
-    return updatedDoc.data() as CalendarWindow;
-  }
-  return null;
+export async function updateWindow(day: number, data: Partial<Omit<CalendarWindow, 'day'>>): Promise<CalendarWindow | null> {
+    const windows = await readWindowsFile();
+    const windowIndex = windows.findIndex(w => w.day === day);
+
+    if (windowIndex === -1) {
+        return null;
+    }
+    
+    const existingWindow = windows[windowIndex];
+
+    // Preserve the imageHint if it's not being updated
+    const updatedData = {
+        ...data,
+        imageHint: data.imageUrl === existingWindow.imageUrl ? existingWindow.imageHint : ``,
+    };
+
+    windows[windowIndex] = { ...existingWindow, ...updatedData };
+    await writeWindowsFile(windows);
+    return windows[windowIndex];
 }
