@@ -14,7 +14,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { initializeData } from '@/lib/data';
 import { initializeDatabaseAction } from '@/lib/actions';
 
 export default function InitializeButton() {
@@ -27,12 +26,12 @@ export default function InitializeButton() {
     if (result.success) {
       toast({
           title: 'Úspěch',
-          description: 'Data byla úspěšně resetována do výchozího stavu.',
+          description: 'Data byla úspěšně resetována do výchozího stavu v úložišti Vercel.',
       });
     } else {
        toast({
         title: 'Chyba',
-        description: 'Nepodařilo se resetovat data.',
+        description: 'Nepodařilo se resetovat data. Zkontrolujte, zda je projekt propojen s Vercel Edge Config Store.',
         variant: 'destructive',
       });
     }
@@ -50,7 +49,7 @@ export default function InitializeButton() {
         <AlertDialogHeader>
           <AlertDialogTitle>Jste si jisti?</AlertDialogTitle>
           <AlertDialogDescription>
-            Tato akce přepíše veškeré aktuální změny (uživatele i okénka) a vrátí je do výchozího stavu, který je definován v kódu. Tuto akci použijte, pokud se data z nějakého důvodu ztratila.
+            Tato akce přepíše veškeré aktuální změny (uživatele i okénka) v úložišti Vercel a vrátí je do výchozího stavu, který je definován v kódu. Tuto akci použijte, pokud chcete začít znovu.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

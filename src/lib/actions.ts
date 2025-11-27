@@ -6,37 +6,25 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { CalendarWindow, User } from "./definitions";
-import { Octokit } from "octokit";
+import { create, get } from '@vercel/edge-config';
 import initialUsers from './data/users.json';
 import initialWindows from './data/windows.json';
 
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-const owner = process.env.GITHUB_REPO_OWNER!;
-const repo = process.env.GITHUB_REPO_NAME!;
+// --- Vercel Edge Config Helpers ---
 
-async function getFile(path: string): Promise<{ content: string; sha: string }> {
-  const { data } = await octokit.rest.repos.getContent({
-    owner,
-    repo,
-    path,
-  });
-
-  if (Array.isArray(data) || !("content" in data)) {
-    throw new Error(`Could not retrieve file content for ${path}`);
-  }
-
-  return { content: Buffer.from(data.content, "base64").toString(), sha: data.sha };
+async function getEdgeConfigData<T>(key: string): Promise<T> {
+    // Vercel injects the EDGE_CONFIG environment variable automatically
+    const data = await get<T>(key);
+    if (data === undefined) {
+        throw new Error(`Data for key "${key}" not found in Edge Config.`);
+    }
+    return data;
 }
 
-async function updateFile(path: string, content: string, sha: string, commitMessage: string): Promise<void> {
-  await octokit.rest.repos.createOrUpdateFileContents({
-    owner,
-    repo,
-    path,
-    message: commitMessage,
-    content: Buffer.from(content).toString("base64"),
-    sha,
-  });
+async function updateEdgeConfigData<T>(key: string, data: T): Promise<void> {
+    await create({
+        [key]: data,
+    });
 }
 
 
@@ -61,8 +49,7 @@ export async function login(prevState: any, formData: FormData) {
   const { username, password } = validatedFields.data;
 
   try {
-    const { content: usersContent } = await getFile('src/lib/data/users.json');
-    const users: User[] = JSON.parse(usersContent);
+    const users = await getEdgeConfigData<User[]>('users');
     const user = users.find(u => u.username === username);
 
     if (!user || user.password !== password) {
@@ -77,6 +64,9 @@ export async function login(prevState: any, formData: FormData) {
     });
   } catch (error) {
     console.error("Login error:", error);
+    if (error instanceof Error && error.message.includes("not found in Edge Config")) {
+        return { message: "Data v aplikaci ještě nebyla inicializována. Požádejte administrátora, aby resetoval data." };
+    }
     return { message: "Během přihlášení došlo k neočekávané chybě." };
   }
 
@@ -109,9 +99,7 @@ export async function addUser(prevState: any, formData: FormData) {
   }
 
   try {
-    const { content: usersContent, sha } = await getFile('src/lib/data/users.json');
-    const users: User[] = JSON.parse(usersContent);
-    
+    const users = await getEdgeConfigData<User[]>('users');
     const { username, password } = validatedFields.data;
 
     if (users.some(u => u.username === username)) {
@@ -124,9 +112,9 @@ export async function addUser(prevState: any, formData: FormData) {
       password,
       role: 'user',
     };
-    users.push(newUser);
+    const updatedUsers = [...users, newUser];
 
-    await updateFile('src/lib/data/users.json', JSON.stringify(users, null, 2), sha, `feat: Add user ${username}`);
+    await updateEdgeConfigData('users', updatedUsers);
     revalidatePath("/admin/users");
     return { message: `Uživatel ${username} byl úspěšně vytvořen.` };
   } catch (error) {
@@ -137,9 +125,7 @@ export async function addUser(prevState: any, formData: FormData) {
 
 export async function deleteUserAction(id: string) {
     try {
-      const { content: usersContent, sha } = await getFile('src/lib/data/users.json');
-      const users: User[] = JSON.parse(usersContent);
-
+      const users = await getEdgeConfigData<User[]>('users');
       const userToDelete = users.find(u => u.id === id);
       if (!userToDelete) {
         return { message: "Uživatel nenalezen", isError: true };
@@ -149,7 +135,7 @@ export async function deleteUserAction(id: string) {
       }
       
       const updatedUsers = users.filter(u => u.id !== id);
-      await updateFile('src/lib/data/users.json', JSON.stringify(updatedUsers, null, 2), sha, `feat: Delete user ${userToDelete.username}`);
+      await updateEdgeConfigData('users', updatedUsers);
       
       revalidatePath('/admin/users');
       return { message: 'Uživatel úspěšně smazán.', isError: false };
@@ -183,9 +169,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
     const { day, ...data } = validatedFields.data;
     
     try {
-        const { content: windowsContent, sha } = await getFile('src/lib/data/windows.json');
-        const windows: CalendarWindow[] = JSON.parse(windowsContent);
-        
+        const windows = await getEdgeConfigData<CalendarWindow[]>('windows');
         const windowIndex = windows.findIndex(w => w.day === day);
         if (windowIndex === -1) {
             return { message: "Okénko nebylo nalezeno." };
@@ -196,7 +180,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
         
         windows[windowIndex] = { ...existingWindow, ...data, imageHint };
 
-        await updateFile('src/lib/data/windows.json', JSON.stringify(windows, null, 2), sha, `feat: Update content for day ${day}`);
+        await updateEdgeConfigData('windows', windows);
 
         revalidatePath("/admin/windows");
         revalidatePath("/");
@@ -210,12 +194,8 @@ export async function updateWindow(prevState: any, formData: FormData) {
 
 export async function initializeDatabaseAction() {
     try {
-      // This action now resets the content of the files in GitHub to their initial state.
-      const { sha: usersSha } = await getFile('src/lib/data/users.json');
-      await updateFile('src/lib/data/users.json', JSON.stringify(initialUsers, null, 2), usersSha, 'chore: Reset user data to initial state');
-
-      const { sha: windowsSha } = await getFile('src/lib/data/windows.json');
-      await updateFile('src/lib/data/windows.json', JSON.stringify(initialWindows, null, 2), windowsSha, 'chore: Reset window data to initial state');
+      await updateEdgeConfigData('users', initialUsers);
+      await updateEdgeConfigData('windows', initialWindows);
 
       revalidatePath('/admin', 'layout');
       revalidatePath('/', 'layout');
