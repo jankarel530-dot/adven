@@ -5,11 +5,10 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { User, CalendarWindow } from "./definitions";
+import type { User } from "./definitions";
 import { getUsers, getWindows } from "./data";
 import initialUsers from "./data/users.json";
 import initialWindows from "./data/windows.json";
-import { createClient } from "@vercel/edge-config";
 
 // --- Vercel Edge Config Update Function ---
 
@@ -24,11 +23,24 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
         throw new Error("Missing VERCEL_API_TOKEN environment variable.");
     }
     
-    const client = createClient(connectionString);
-    const configId = await client.getConfigId();
-    if (!configId) {
-        throw new Error("Could not determine Edge Config ID from connection string.");
+    // We don't need to parse the ID, we can use the connection string directly
+    // to determine the config ID.
+    const configIdRes = await fetch(`https://api.vercel.com/v1/edge-config/find-by-connection-string`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${vercelToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ connectionString }),
+    });
+
+    if (!configIdRes.ok) {
+        const errorBody = await configIdRes.json();
+        console.error("Failed to find Edge Config ID:", errorBody);
+        throw new Error(`Failed to find Edge Config ID from connection string: ${errorBody.error?.message || 'Unknown API error'}`);
     }
+    const {id: configId} = await configIdRes.json();
+
 
     const url = `https://api.vercel.com/v1/edge-config/${configId}/items`;
 
@@ -88,17 +100,11 @@ export async function login(prevState: any, formData: FormData) {
   try {
     const users = await getUsers();
     
-    if (!users || users.length === 0) {
-        if (username === 'admin' && password === 'password') {
-            console.log("Database is empty. Authenticating admin for initialization.");
-            authenticatedUser = { id: "0", username: 'admin', role: 'admin', password: 'password' };
-        }
-    } else {
-        const user = users.find(u => u.username === username);
-        if (user && user.password === password) {
-          authenticatedUser = user;
-        }
+    const user = users.find(u => u.username === username);
+    if (user && user.password === password) {
+        authenticatedUser = user;
     }
+
   } catch (error) {
     console.error("Login error during data fetching:", error);
      const errorMessage = error instanceof Error ? error.message : "Během přihlašování došlo k chybě serveru.";

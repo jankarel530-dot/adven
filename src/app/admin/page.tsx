@@ -2,8 +2,7 @@
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Settings, ArrowRight, Database } from "lucide-react";
-import InitializeButton from "@/components/admin/initialize-button";
+import { Users, Settings, ArrowRight } from "lucide-react";
 
 export default function AdminDashboard() {
   return (
@@ -38,17 +37,6 @@ export default function AdminDashboard() {
                 Přejít na správu okének <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Database /> Resetovat data</CardTitle>
-            <CardDescription>
-              Tato akce resetuje veškerá data (uživatele a okénka) do jejich původního stavu. Použijte, pokud se data ztratí nebo chcete začít znovu.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <InitializeButton />
           </CardContent>
         </Card>
       </div>
