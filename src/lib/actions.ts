@@ -7,52 +7,24 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { User, CalendarWindow } from "./definitions";
 import { getUsers, getWindows } from "./data";
-import initialUsers from "./data/users.json";
-import initialWindows from "./data/windows.json";
+import { get } from "@vercel/edge-config";
 
-// --- Vercel Edge Config Update Function ---
-
-async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
-    const connectionString = process.env.EDGE_CONFIG;
-     if (!connectionString) {
-        throw new Error("Chybějící proměnná prostředí EDGE_CONFIG.");
-    }
-    const vercelToken = process.env.VERCEL_API_TOKEN;
-
-    if (!vercelToken) {
-        throw new Error("Chybějící proměnná prostředí VERCEL_API_TOKEN.");
-    }
-
-    const updateUrl = `https://api.vercel.com/v1/edge-config/items?connectionString=${encodeURIComponent(connectionString)}`;
-
-    const response = await fetch(updateUrl, {
-        method: "PATCH",
+async function updateEdgeConfig<T>(key: 'users' | 'windows', value: T) {
+    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:9002';
+    const response = await fetch(`${baseUrl}/api/update-config`, {
+        method: "POST",
         headers: {
-            Authorization: `Bearer ${vercelToken}`,
             "Content-Type": "application/json",
+            "x-api-token": process.env.EDGE_CONFIG_API_TOKEN || '',
         },
-        body: JSON.stringify({
-            items: [
-                {
-                    operation: "update",
-                    key: key,
-                    value: data,
-                },
-            ],
-        }),
+        body: JSON.stringify({ key, value }),
     });
 
     if (!response.ok) {
-        const errorBody = await response.text();
-        console.error("Chyba při aktualizaci Edge Configu:", errorBody);
-        throw new Error(`Nepodařilo se aktualizovat Edge Config: ${errorBody}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update Edge Config");
     }
-
-    revalidatePath('/', 'layout');
-
-    return await response.json();
 }
-
 
 // --- AUTH ACTIONS ---
 
@@ -83,7 +55,6 @@ export async function login(prevState: any, formData: FormData) {
         return { message: "Neplatné uživatelské jméno nebo heslo." };
     }
   
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...sessionData } = user;
     
     cookies().set("session", JSON.stringify(sessionData), {
@@ -95,8 +66,8 @@ export async function login(prevState: any, formData: FormData) {
 
   } catch (error) {
      const errorMessage = error instanceof Error ? error.message : "Během přihlašování došlo k chybě serveru.";
-     if (errorMessage.includes("EDGE_CONFIG") || errorMessage.includes("fetch")) {
-         return { message: "Chyba připojení k databázi. Zkontrolujte nastavení proměnných prostředí na Vercelu." };
+     if (errorMessage.includes("EDGE_CONFIG")) {
+         return { message: "Chyba připojení k databázi. Zkontrolujte nastavení proměnných prostředí." };
      }
      return { message: errorMessage };
   }
@@ -185,8 +156,8 @@ export async function deleteUserAction(id: string) {
 const windowSchema = z.object({
   day: z.coerce.number().int().min(1).max(24),
   message: z.string().optional(),
-  imageUrl: z.string().url({ message: "Zadejte platnou URL adresu obrázku." }).or(z.literal("")),
-  videoUrl: z.string().url({ message: "Zadejte platnou URL pro video." }).or(z.literal("")),
+  imageUrl: z.string().url({ message: "Zadejte platnou URL adresu obrázku." }).or(z.literal("")).optional(),
+  videoUrl: z.string().url({ message: "Zadejte platnou URL pro video." }).or(z.literal("")).optional(),
   manualState: z.enum(["default", "unlocked", "locked"]),
 });
 
@@ -222,6 +193,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
     return { message: `Den ${day} byl úspěšně upraven.` };
   } catch (error) {
     console.error("Failed to update window:", error);
-    return { message: `Nepodařilo se upravit den ${day}.` };
+    const message = error instanceof Error ? error.message : "An unknown error occurred.";
+    return { message: `Nepodařilo se upravit den ${day}: ${message}` };
   }
 }
