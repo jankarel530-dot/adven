@@ -12,12 +12,29 @@ import initialWindows from "./data/windows.json";
 
 // --- Vercel Edge Config Update Function ---
 
+// Extracts the Edge Config ID from the connection string
+function getEdgeConfigId() {
+    const connectionString = process.env.EDGE_CONFIG;
+    if (!connectionString) {
+        throw new Error("Missing EDGE_CONFIG environment variable.");
+    }
+    // The format is edge_config_xxxxxxxx...
+    // We can extract the ID from the URL part of the string
+    const url = new URL(connectionString);
+    const id = url.searchParams.get('id');
+    if (!id) {
+       throw new Error("Could not parse Edge Config ID from connection string.");
+    }
+    return id;
+}
+
+
 async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
-    const edgeConfigId = process.env.EDGE_CONFIG_ID;
+    const edgeConfigId = getEdgeConfigId();
     const vercelToken = process.env.VERCEL_API_TOKEN;
 
-    if (!edgeConfigId || !vercelToken) {
-        throw new Error("Missing Vercel environment variables for Edge Config update.");
+    if (!vercelToken) {
+        throw new Error("Missing VERCEL_API_TOKEN environment variable.");
     }
 
     const url = `https://api.vercel.com/v1/edge-config/${edgeConfigId}/items`;
@@ -42,12 +59,12 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
     if (!response.ok) {
         const errorBody = await response.json();
         console.error("Failed to update Edge Config:", errorBody);
-        throw new Error(`Failed to update Edge Config: ${errorBody.error.message}`);
+        throw new Error(`Failed to update Edge Config: ${errorBody.error?.message || 'Unknown API error'}`);
     }
 
     // Revalidate paths to reflect changes immediately
-    revalidatePath('/admin', true);
-    revalidatePath('/', true);
+    revalidatePath('/admin', 'layout');
+    revalidatePath('/', 'layout');
 
     return await response.json();
 }
@@ -71,9 +88,10 @@ export async function login(prevState: any, formData: FormData) {
       message: "Chybně vyplněné údaje.",
     };
   }
-  
+
   const { username, password } = validatedFields.data;
   let authenticatedUser: Omit<User, 'password'> | null = null;
+  let authError: string | null = null;
   
   try {
     const users = await getUsers();
@@ -94,13 +112,17 @@ export async function login(prevState: any, formData: FormData) {
     }
   } catch (error) {
     console.error("Login error:", error);
+    if (error instanceof Error && error.message.includes("No connection string provided")) {
+       return { message: "Chyba připojení k databázi. Zkontrolujte nastavení na Vercelu." };
+    }
     return { message: "Během přihlašování došlo k chybě serveru." };
   }
 
   if (!authenticatedUser) {
     return { message: "Neplatné uživatelské jméno nebo heslo." };
   }
-
+  
+  // If authentication is successful, set the cookie and redirect
   cookies().set("session", authenticatedUser.username, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -245,13 +267,14 @@ export async function initializeDatabaseAction() {
         await updateEdgeConfig('windows', initialWindows);
         console.log("Database initialized successfully.");
         
-        revalidatePath('/admin/users', 'layout');
-        revalidatePath('/admin/windows', 'layout');
+        // Use 'layout' revalidation to be sure all data is fresh
+        revalidatePath('/admin', 'layout');
         revalidatePath('/', 'layout');
 
         return { isError: false, message: "Data byla úspěšně resetována." };
     } catch (error) {
         console.error('Failed to initialize database:', error);
-        return { isError: true, message: "Nepodařilo se resetovat data." };
+        const message = error instanceof Error ? error.message : "Nepodařilo se resetovat data.";
+        return { isError: true, message };
     }
 }
