@@ -101,24 +101,37 @@ export async function login(prevState: any, formData: FormData) {
   }
 
   const { username, password } = validatedFields.data;
-  let authenticatedUser: Omit<User, 'password'> | null = null;
   
   try {
     const users = await getUsers();
+    let authenticatedUser: User | null = null;
     
     if (!users || users.length === 0) {
       if (username === 'admin' && password === 'password') {
         console.log("Database is empty. Authenticating admin for initialization.");
-        authenticatedUser = { id: "0", username: 'admin', role: 'admin' };
+        authenticatedUser = { id: "0", username: 'admin', role: 'admin', password: 'password' };
       }
     } else {
         const user = users.find(u => u.username === username);
         if (user && user.password === password) {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { password, ...userWithoutPassword } = user;
-          authenticatedUser = userWithoutPassword;
+          authenticatedUser = user;
         }
     }
+
+    if (!authenticatedUser) {
+      return { message: "Neplatné uživatelské jméno nebo heslo." };
+    }
+  
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _, ...sessionData } = authenticatedUser;
+    
+    await cookies().set("session", JSON.stringify(sessionData), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7, // One week
+      path: "/",
+    });
+
   } catch (error) {
     console.error("Login error:", error);
     if (error instanceof Error && error.message.includes("No connection string provided")) {
@@ -126,17 +139,6 @@ export async function login(prevState: any, formData: FormData) {
     }
     return { message: "Během přihlašování došlo k chybě serveru." };
   }
-
-  if (!authenticatedUser) {
-    return { message: "Neplatné uživatelské jméno nebo heslo." };
-  }
-  
-  cookies().set("session", authenticatedUser.username, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 60 * 24 * 7, // One week
-    path: "/",
-  });
 
   redirect("/");
 }
