@@ -15,26 +15,8 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
     if (!vercelToken) {
         throw new Error("Chybějící proměnná prostředí VERCEL_API_TOKEN.");
     }
-    
-    const findIdUrl = `https://api.vercel.com/v1/edge-config/find-by-connection-string`;
-    const configIdRes = await fetch(findIdUrl, {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${vercelToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ connectionString }),
-    });
 
-    if (!configIdRes.ok) {
-        const errorBody = await configIdRes.text();
-        console.error("Chyba při hledání ID Edge Configu:", errorBody);
-        throw new Error(`Nepodařilo se najít ID Edge Configu: ${errorBody}`);
-    }
-    const {id: configId} = await configIdRes.json();
-
-
-    const updateUrl = `https://api.vercel.com/v1/edge-config/${configId}/items`;
+    const updateUrl = `https://api.vercel.com/v1/edge-config/items?connectionString=${encodeURIComponent(connectionString)}`;
 
     const response = await fetch(updateUrl, {
         method: "PATCH",
@@ -67,22 +49,24 @@ export async function getUsers(): Promise<User[]> {
     if (!connectionString) {
         throw new Error('@vercel/edge-config: No connection string provided. Please set the EDGE_CONFIG environment variable.');
     }
-    const client = createClient(connectionString);
-    let users = await client.get<User[]>('users');
     
-    if (!users || users.length === 0) {
-        console.log("Žádní uživatelé v Edge Configu, inicializuji výchozí data.");
-        try {
+    try {
+        const client = createClient(connectionString);
+        let users = await client.get<User[]>('users');
+        
+        if (!users || users.length === 0) {
+            console.log("Žádní uživatelé v Edge Configu, inicializuji výchozí data.");
             await updateEdgeConfig('users', initialUsers);
             console.log("Výchozí uživatelé úspěšně nahráni.");
             return initialUsers as User[];
-        } catch (error) {
-            console.error("Nepodařilo se inicializovat uživatele v Edge Config:", error);
-            throw error; // Re-throw the error to be caught by the caller
         }
+        
+        return users;
+    } catch (error) {
+        console.error("Error fetching users from Edge Config:", error);
+        // If there's an error reading (e.g., network issue), re-throw it so the caller can handle it.
+        throw new Error(`Nepodařilo se načíst uživatele z Edge Configu. Zkontrolujte připojení a nastavení. Původní chyba: ${error}`);
     }
-    
-    return users;
 }
 
 export async function getWindows(): Promise<CalendarWindow[]> {
@@ -90,21 +74,23 @@ export async function getWindows(): Promise<CalendarWindow[]> {
     if (!connectionString) {
         throw new Error('@vercel/edge-config: No connection string provided. Please set the EDGE_CONFIG environment variable.');
     }
-    const client = createClient(connectionString);
-    let windows = await client.get<CalendarWindow[]>('windows');
 
-    if (!windows || windows.length === 0) {
-        console.log("Žádná okénka v Edge Configu, inicializuji výchozí data.");
-        try {
+    try {
+        const client = createClient(connectionString);
+        let windows = await client.get<CalendarWindow[]>('windows');
+
+        if (!windows || windows.length === 0) {
+            console.log("Žádná okénka v Edge Configu, inicializuji výchozí data.");
             await updateEdgeConfig('windows', initialWindows);
             console.log("Výchozí okénka úspěšně nahrána.");
-            return initialWindows as CalendarWindow[];
-        } catch(error) {
-            console.error("Nepodařilo se inicializovat okénka v Edge Config:", error);
-            throw error;
+            windows = initialWindows as CalendarWindow[];
         }
+        
+        const sortedWindows = windows.sort((a, b) => a.day - b.day);
+        return sortedWindows;
+
+    } catch(error) {
+        console.error("Error fetching windows from Edge Config:", error);
+        throw new Error(`Nepodařilo se načíst okénka z Edge Configu. Zkontrolujte připojení a nastavení. Původní chyba: ${error}`);
     }
-    
-    const sortedWindows = windows.sort((a, b) => a.day - b.day);
-    return sortedWindows;
 }

@@ -23,24 +23,7 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
         throw new Error("Chybějící proměnná prostředí VERCEL_API_TOKEN.");
     }
 
-    const findIdUrl = `https://api.vercel.com/v1/edge-config/find-by-connection-string`;
-    const configIdRes = await fetch(findIdUrl, {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${vercelToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ connectionString }),
-    });
-
-    if (!configIdRes.ok) {
-        const errorBody = await configIdRes.text();
-        console.error("Chyba při hledání ID Edge Configu:", errorBody);
-        throw new Error(`Nepodařilo se najít ID Edge Configu: ${errorBody}`);
-    }
-    const {id: configId} = await configIdRes.json();
-
-    const updateUrl = `https://api.vercel.com/v1/edge-config/${configId}/items`;
+    const updateUrl = `https://api.vercel.com/v1/edge-config/items?connectionString=${encodeURIComponent(connectionString)}`;
 
     const response = await fetch(updateUrl, {
         method: "PATCH",
@@ -112,7 +95,7 @@ export async function login(prevState: any, formData: FormData) {
 
   } catch (error) {
      const errorMessage = error instanceof Error ? error.message : "Během přihlašování došlo k chybě serveru.";
-     if (errorMessage.includes("EDGE_CONFIG")) {
+     if (errorMessage.includes("EDGE_CONFIG") || errorMessage.includes("fetch")) {
          return { message: "Chyba připojení k databázi. Zkontrolujte nastavení proměnných prostředí na Vercelu." };
      }
      return { message: errorMessage };
