@@ -161,7 +161,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
     const windowIndex = windows.findIndex(w => w.day === day);
 
     if (windowIndex === -1) {
-      return { message: "Okénko nebylo nalezeno." };
+      return { message: `Chyba: Okénko pro den ${day} nebylo nalezeno.` };
     }
     
     const existingWindow = windows[windowIndex];
@@ -175,6 +175,6 @@ export async function updateWindow(prevState: any, formData: FormData) {
   } catch (error) {
     console.error("Failed to update window:", error);
     const message = error instanceof Error ? error.message : "An unknown error occurred.";
-    return { message: `Nepodařilo se upravit den ${day}: ${message}` };
+    return { message: `Nepodařilo se upravit den ${day}: ${message}`, isError: true };
   }
 }

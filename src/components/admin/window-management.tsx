@@ -80,8 +80,8 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
 
   useEffect(() => {
     if (state?.message) {
-      if (state.errors) {
-        toast({ title: `Chyba při úpravě dne ${windowData.day}`, description: state.message, variant: "destructive" });
+      if (state.isError || state.errors) {
+        toast({ title: `Chyba`, description: state.message, variant: "destructive" });
       } else {
         toast({ title: "Úspěch", description: state.message });
       }
