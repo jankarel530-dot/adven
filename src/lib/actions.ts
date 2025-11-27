@@ -7,22 +7,18 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { User, CalendarWindow } from "./definitions";
 import { getUsers, getWindows } from "./data";
+import { createClient } from "@vercel/edge-config";
 
 async function updateEdgeConfig<T>(key: 'users' | 'windows', value: T) {
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:9002';
-    
-    const response = await fetch(`${baseUrl}/api/update-config`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "x-api-token": process.env.EDGE_CONFIG_API_TOKEN || '',
-        },
-        body: JSON.stringify({ key, value }),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update Edge Config via API");
+    if (!process.env.EDGE_CONFIG) {
+        throw new Error('EDGE_CONFIG connection string not found in environment variables.');
+    }
+    const client = createClient(process.env.EDGE_CONFIG);
+    try {
+        await client.update(key, value);
+    } catch (error) {
+        console.error(`Failed to update Edge Config for key "${key}":`, error);
+        throw new Error(`Nepodařilo se aktualizovat data v Edge Configu.`);
     }
 }
 
@@ -66,9 +62,6 @@ export async function login(prevState: any, formData: FormData) {
 
   } catch (error) {
      const errorMessage = error instanceof Error ? error.message : "Během přihlašování došlo k chybě serveru.";
-     if (errorMessage.includes("EDGE_CONFIG")) {
-         return { message: "Chyba připojení k databázi. Zkontrolujte nastavení proměnných prostředí." };
-     }
      return { message: errorMessage };
   }
 

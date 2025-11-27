@@ -5,32 +5,18 @@ import type { User, CalendarWindow } from './definitions';
 import initialUsers from "./data/users.json";
 import initialWindows from "./data/windows.json";
 
-// This function now uses the API route for writing data
 async function initializeData<T>(key: 'users' | 'windows', initialData: T): Promise<T> {
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:9002';
-    
+    if (!process.env.EDGE_CONFIG) {
+        throw new Error('EDGE_CONFIG connection string not found. Please set it in your environment variables.');
+    }
+    const client = createClient(process.env.EDGE_CONFIG);
     try {
-        console.log(`Attempting to initialize ${key} via API route...`);
-        const response = await fetch(`${baseUrl}/api/update-config`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-token": process.env.EDGE_CONFIG_API_TOKEN || '',
-            },
-            body: JSON.stringify({ key, value: initialData }),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Failed to update Edge Config during initialization");
-        }
-        console.log(`${key} initialized successfully.`);
+        await client.update(key, initialData);
+        console.log(`Initialized ${key} in Edge Config.`);
         return initialData;
-
     } catch (error) {
-        console.error(`Failed to initialize ${key}:`, error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        throw new Error(`Nepodařilo se inicializovat data pro ${key}. Chyba: ${errorMessage}`);
+        console.error(`Failed to initialize ${key} in Edge Config:`, error);
+        throw new Error(`Nepodařilo se inicializovat data pro ${key}.`);
     }
 }
 
@@ -44,7 +30,7 @@ export async function getUsers(): Promise<User[]> {
         const client = createClient(connectionString);
         let users = await client.get<User[]>('users');
         
-        if (!users || users.length === 0) {
+        if (users === undefined) {
             console.log("No users found in Edge Config, initializing with default data.");
             return await initializeData('users', initialUsers as User[]);
         }
@@ -67,7 +53,7 @@ export async function getWindows(): Promise<CalendarWindow[]> {
         const client = createClient(connectionString);
         let windows = await client.get<CalendarWindow[]>('windows');
 
-        if (!windows || windows.length === 0) {
+        if (windows === undefined) {
             console.log("No windows found in Edge Config, initializing with default data.");
             return await initializeData('windows', initialWindows as CalendarWindow[]);
         }
