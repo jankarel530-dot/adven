@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { findUserByUsername, addUser as dbAddUser, updateWindow as dbUpdateWindow, deleteUser as dbDeleteUser } from "./data";
+import { findUserByUsername, addUser as dbAddUser, updateWindow as dbUpdateWindow, deleteUser as dbDeleteUser, initializeData } from "./data";
 import type { CalendarWindow } from "./definitions";
 
 const loginSchema = z.object({
@@ -108,9 +108,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
             message: "Validation failed."
         };
     }
-
-    // This is a bit of a hack to get the imageHint.
-    // Ideally, this would be part of the form, but for now we'll read it from the existing data.
+    
     const { day, ...data } = validatedFields.data;
     
     try {
@@ -121,5 +119,18 @@ export async function updateWindow(prevState: any, formData: FormData) {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
         return { message: `Failed to update window: ${errorMessage}` };
+    }
+}
+
+
+export async function initializeDatabaseAction() {
+    try {
+      await initializeData();
+      revalidatePath('/admin');
+      revalidatePath('/');
+      return { success: true };
+    } catch(e) {
+      console.error(e);
+      return { success: false };
     }
 }

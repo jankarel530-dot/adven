@@ -1,7 +1,5 @@
 'use client';
 
-// This component is no longer needed as data is file-based.
-// It is kept for potential future use but is currently non-functional for production.
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +14,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { initializeData } from '@/lib/data';
+import { initializeDatabaseAction } from '@/lib/actions';
 
 export default function InitializeButton() {
   const [loading, setLoading] = useState(false);
@@ -23,11 +23,19 @@ export default function InitializeButton() {
 
   const handleInitialize = async () => {
     setLoading(true);
-    toast({
-        title: 'Akce není podporována',
-        description: 'Inicializace databáze byla nahrazena přímou editací souborů. Tento prvek je zde ponechán pro případ budoucího rozšíření.',
+    const result = await initializeDatabaseAction();
+    if (result.success) {
+      toast({
+          title: 'Úspěch',
+          description: 'Data byla úspěšně resetována do výchozího stavu.',
+      });
+    } else {
+       toast({
+        title: 'Chyba',
+        description: 'Nepodařilo se resetovat data.',
         variant: 'destructive',
-    });
+      });
+    }
     setLoading(false);
   };
 
@@ -35,18 +43,19 @@ export default function InitializeButton() {
      <AlertDialog>
       <AlertDialogTrigger asChild>
         <Button variant="destructive" disabled={loading}>
-            {loading ? 'Inicializace...' : 'Inicializovat databázi'}
+            {loading ? 'Inicializace...' : 'Resetovat data'}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Akce není podporována</AlertDialogTitle>
+          <AlertDialogTitle>Jste si jisti?</AlertDialogTitle>
           <AlertDialogDescription>
-            S přechodem na souborové úložiště byla tato funkce deaktivována. Výchozí data jsou nyní přímo v souborech `users.json` a `windows.json`. Tento prvek je zde ponechán pro případ budoucího rozšíření.
+            Tato akce přepíše veškeré aktuální změny (uživatele i okénka) a vrátí je do výchozího stavu, který je definován v kódu. Tuto akci použijte, pokud se data z nějakého důvodu ztratila.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Rozumím</AlertDialogCancel>
+          <AlertDialogCancel>Zrušit</AlertDialogCancel>
+          <AlertDialogAction onClick={handleInitialize}>Ano, resetovat</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -41,9 +41,9 @@ export default function AdminDashboard() {
         </Card>
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Database /> Inicializace databáze</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Database /> Resetovat data</CardTitle>
             <CardDescription>
-              Pokud je databáze prázdná, toto tlačítko ji naplní výchozími daty (uživateli a okénky). Spusťte pouze jednou.
+              Tato akce resetuje veškerá data (uživatele a okénka) do jejich původního stavu. Použijte, pokud se data ztratí nebo chcete začít znovu.
             </CardDescription>
           </CardHeader>
           <CardContent>
