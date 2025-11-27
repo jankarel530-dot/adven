@@ -17,36 +17,23 @@ function getClient() {
 
 
 export async function getUsers(): Promise<User[]> {
-    try {
-        const client = getClient();
-        const users = await client.get<User[]>('users');
-        // If the store is new and 'users' key doesn't exist, it returns undefined.
-        if (!users) {
-            console.log("No users found in Edge Config, returning empty array.");
-            return [];
-        }
-        return users;
-    } catch (error) {
-        // This error might fire if the connection string is missing or invalid.
-        console.error("Error fetching users from Edge Config:", error);
-        // Return empty array to prevent the app from crashing.
+    const client = getClient();
+    const users = await client.get<User[]>('users');
+    // If the store is new and 'users' key doesn't exist, it returns undefined.
+    if (!users) {
+        console.log("No users found in Edge Config, returning empty array.");
         return [];
     }
+    return users;
 }
 
 export async function getWindows(): Promise<CalendarWindow[]> {
-    try {
-        const client = getClient();
-        const windows = await client.get<CalendarWindow[]>('windows');
-        if (!windows) {
-            console.log("No windows found in Edge Config, returning empty array.");
-            return [];
-        }
-        const sortedWindows = windows.sort((a, b) => a.day - b.day);
-        return sortedWindows;
-    } catch (error)
-    {
-        console.error("Error fetching windows from Edge Config:", error);
+    const client = getClient();
+    const windows = await client.get<CalendarWindow[]>('windows');
+    if (!windows) {
+        console.log("No windows found in Edge Config, returning empty array.");
         return [];
     }
+    const sortedWindows = windows.sort((a, b) => a.day - b.day);
+    return sortedWindows;
 }
