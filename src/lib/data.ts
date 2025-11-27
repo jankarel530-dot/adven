@@ -1,117 +1,126 @@
-import "server-only";
-import type { User, CalendarWindow } from "./definitions";
-import placeholderData from './placeholder-images.json';
+import 'server-only';
+import {promises as fs} from 'fs';
+import path from 'path';
+import type {User, CalendarWindow} from './definitions';
 
-// In a real application, this would be a database.
-// For this scaffold, we use in-memory data.
-// This approach prevents data from being reset on every hot-reload in development.
+// In a real production environment, use a database.
+// For this project, we use JSON files for persistence.
+const dataDir = path.join(process.cwd(), 'src', 'lib', 'data');
+const usersFilePath = path.join(dataDir, 'users.json');
+const windowsFilePath = path.join(dataDir, 'windows.json');
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __users: User[] | undefined;
-  // eslint-disable-next-line no-var
-  var __windows: CalendarWindow[] | undefined;
-}
-
-const initializeUsers = (): User[] => {
+// Helper function to read user data
+async function readUsers(): Promise<User[]> {
+  try {
+    const data = await fs.readFile(usersFilePath, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading users.json, returning default users:', error);
+    // Default data if file doesn't exist
     return [
-        { id: "1", username: "admin", password: "password", role: "admin" },
-        { id: "2", username: "user", password: "password", role: "user" },
+      {id: '1', username: 'admin', password: 'password', role: 'admin'},
+      {id: '2', username: 'user', password: 'password', role: 'user'},
     ];
+  }
 }
 
-const initializeWindows = (): CalendarWindow[] => {
-  return Array.from({ length: 24 }, (_, i) => {
-    const day = i + 1;
-    const placeholder = placeholderData.placeholderImages.find(p => p.id === `day-${day}`) || {
-      imageUrl: `https://picsum.photos/seed/${day}/600/400`,
-      imageHint: 'christmas placeholder'
-    };
-    return {
-      day: day,
-      message: `A special message for day ${day}!`,
-      imageUrl: placeholder.imageUrl,
-      imageHint: placeholder.imageHint,
-      videoUrl: "",
-      manualState: "default",
-    };
-  });
-};
-
-const getUsersGlobal = (): User[] => {
-  if (process.env.NODE_ENV === 'production') {
-    return initializeUsers();
-  }
-  if (!global.__users) {
-    global.__users = initializeUsers();
-  }
-  return global.__users;
+// Helper function to write user data
+async function writeUsers(users: User[]): Promise<void> {
+  await fs.mkdir(dataDir, {recursive: true});
+  await fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), 'utf-8');
 }
 
-const getWindowsGlobal = (): CalendarWindow[] => {
-   if (process.env.NODE_ENV === 'production') {
-    return initializeWindows();
+// Helper function to read window data
+async function readWindows(): Promise<CalendarWindow[]> {
+  try {
+    const data = await fs.readFile(windowsFilePath, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading windows.json, returning default windows:', error);
+    // Default data if file doesn't exist
+    return Array.from({length: 24}, (_, i) => ({
+      day: i + 1,
+      message: `A special message for day ${i + 1}!`,
+      imageUrl: `https://picsum.photos/seed/${i + 1}/600/400`,
+      imageHint: 'christmas placeholder',
+      videoUrl: '',
+      manualState: 'default',
+    }));
   }
-  if (!global.__windows) {
-    global.__windows = initializeWindows();
-  }
-  return global.__windows;
 }
 
-const users: User[] = getUsersGlobal();
-const windows: CalendarWindow[] = getWindowsGlobal();
-
+// Helper function to write window data
+async function writeWindows(windows: CalendarWindow[]): Promise<void> {
+  await fs.mkdir(dataDir, {recursive: true});
+  await fs.writeFile(windowsFilePath, JSON.stringify(windows, null, 2), 'utf-8');
+}
 
 // --- User Management ---
 export async function getUsers(): Promise<User[]> {
-  return JSON.parse(JSON.stringify(users));
+  return readUsers();
 }
 
-export async function findUserByUsername(username: string): Promise<User | undefined> {
-  const user = users.find((user) => user.username === username);
-  return user ? JSON.parse(JSON.stringify(user)) : undefined;
+export async function findUserByUsername(
+  username: string
+): Promise<User | undefined> {
+  const users = await readUsers();
+  return users.find(user => user.username === username);
 }
 
-export async function addUser(user: Omit<User, "id" | "role">): Promise<User> {
+export async function addUser(user: Omit<User, 'id' | 'role'>): Promise<User> {
+  const users = await readUsers();
   const newUser: User = {
     ...user,
     id: String(Date.now()), // Use a more unique ID
-    role: "user",
+    role: 'user',
   };
   users.push(newUser);
-  return JSON.parse(JSON.stringify(newUser));
+  await writeUsers(users);
+  return newUser;
 }
 
-export async function deleteUser(id: string): Promise<{ message: string } | null> {
-    const userIndex = users.findIndex(user => user.id === id);
-    if (userIndex === -1) {
-        return { message: "User not found" };
-    }
-    const userToDelete = users[userIndex];
-    if (userToDelete.role === 'admin') {
-        return { message: "Cannot delete admin user" };
-    }
-    users.splice(userIndex, 1);
-    return null;
+export async function deleteUser(
+  id: string
+): Promise<{message: string} | null> {
+  let users = await readUsers();
+  const userToDelete = users.find(user => user.id === id);
+
+  if (!userToDelete) {
+    return {message: 'User not found'};
+  }
+  if (userToDelete.role === 'admin') {
+    return {message: 'Cannot delete admin user'};
+  }
+
+  users = users.filter(user => user.id !== id);
+  await writeUsers(users);
+  return null;
 }
 
 // --- Window Management ---
 export async function getWindows(): Promise<CalendarWindow[]> {
-  return JSON.parse(JSON.stringify(windows));
+  return readWindows();
 }
 
-export async function getWindowByDay(day: number): Promise<CalendarWindow | undefined> {
-  const window = windows.find(w => w.day === day);
-  return window ? JSON.parse(JSON.stringify(window)) : undefined;
+export async function getWindowByDay(
+  day: number
+): Promise<CalendarWindow | undefined> {
+  const windows = await readWindows();
+  return windows.find(w => w.day === day);
 }
 
-export async function updateWindow(day: number, data: Partial<Omit<CalendarWindow, 'day'>>): Promise<CalendarWindow | null> {
-    const windowIndex = windows.findIndex(w => w.day === day);
-    if (windowIndex === -1) {
-        return null;
-    }
+export async function updateWindow(
+  day: number,
+  data: Partial<Omit<CalendarWindow, 'day'>>
+): Promise<CalendarWindow | null> {
+  const windows = await readWindows();
+  const windowIndex = windows.findIndex(w => w.day === day);
+  if (windowIndex === -1) {
+    return null;
+  }
 
-    windows[windowIndex] = { ...windows[windowIndex], ...data };
-    
-    return JSON.parse(JSON.stringify(windows[windowIndex]));
+  windows[windowIndex] = {...windows[windowIndex], ...data};
+  await writeWindows(windows);
+
+  return windows[windowIndex];
 }
