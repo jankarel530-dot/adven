@@ -4,6 +4,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Users, Settings, ArrowRight } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default function AdminDashboard() {
   return (
     <div>

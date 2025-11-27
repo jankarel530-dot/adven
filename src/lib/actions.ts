@@ -6,21 +6,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { User, CalendarWindow } from "./definitions";
-import { getUsers, getWindows } from "./data";
-import { createClient } from "@vercel/edge-config";
-
-async function updateEdgeConfig<T>(key: 'users' | 'windows', value: T) {
-    if (!process.env.EDGE_CONFIG) {
-        throw new Error('EDGE_CONFIG connection string not found in environment variables.');
-    }
-    const client = createClient(process.env.EDGE_CONFIG);
-    try {
-        await client.update(key, value);
-    } catch (error) {
-        console.error(`Failed to update Edge Config for key "${key}":`, error);
-        throw new Error(`Nepodařilo se aktualizovat data v Edge Configu.`);
-    }
-}
+import { getUsers, getWindows, setUsers, setWindows } from "./data";
 
 // --- AUTH ACTIONS ---
 
@@ -65,6 +51,7 @@ export async function login(prevState: any, formData: FormData) {
      return { message: errorMessage };
   }
 
+  revalidatePath('/');
   redirect("/");
 }
 
@@ -112,7 +99,7 @@ export async function addUser(prevState: any, formData: FormData) {
       };
 
       const updatedUsers = [...users, newUser];
-      await updateEdgeConfig('users', updatedUsers);
+      await setUsers(updatedUsers);
       
       revalidatePath("/admin/users");
       return { message: `Uživatel ${username} byl úspěšně vytvořen.`, errors: null };
@@ -136,7 +123,7 @@ export async function deleteUserAction(id: string) {
         }
 
         const updatedUsers = users.filter(u => u.id !== id);
-        await updateEdgeConfig('users', updatedUsers);
+        await setUsers(updatedUsers);
         
         revalidatePath('/admin/users');
         return { isError: false, message: `Uživatel ${userToDelete.username} byl smazán.` };
@@ -177,11 +164,10 @@ export async function updateWindow(prevState: any, formData: FormData) {
       return { message: "Okénko nebylo nalezeno." };
     }
     
-    // Preserve imageHint when updating
     const existingWindow = windows[windowIndex];
     windows[windowIndex] = { ...existingWindow, ...dataToUpdate };
 
-    await updateEdgeConfig('windows', windows);
+    await setWindows(windows);
     
     revalidatePath("/admin/windows");
     revalidatePath("/");
