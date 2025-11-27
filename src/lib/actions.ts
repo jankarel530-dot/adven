@@ -18,7 +18,7 @@ function getEdgeConfigId() {
     if (!connectionString) {
         throw new Error("Missing EDGE_CONFIG environment variable.");
     }
-    // The format is edge_config_xxxxxxxx...
+    // The format is "edge_config_xxxxxxxx..."
     // We can extract the ID from the URL part of the string
     try {
         const url = new URL(connectionString);
@@ -28,7 +28,11 @@ function getEdgeConfigId() {
         }
         return id;
     } catch (e) {
-        console.error("Invalid connection string URL", e);
+        console.error("Invalid connection string URL, attempting direct parse", e);
+        // Fallback for when the connection string is just the ID itself in some formats
+        if (connectionString.startsWith('ecfg_')) {
+            return connectionString.split('?')[0];
+        }
         throw new Error("Invalid EDGE_CONFIG connection string format.");
     }
 }
@@ -117,7 +121,7 @@ export async function login(prevState: any, formData: FormData) {
   } catch (error) {
     console.error("Login error:", error);
     if (error instanceof Error && error.message.includes("No connection string provided")) {
-       return { message: "Chyba připojení k databázi. Zkontrolujte nastavení na Vercelu." };
+       return { message: "Chyba připojení k databázi. Zkontrolujte nastavení proměnné EDGE_CONFIG na Vercelu." };
     }
     return { message: "Během přihlašování došlo k chybě serveru." };
   }
