@@ -1,6 +1,6 @@
 
 import 'server-only';
-import { put, list, del } from '@vercel/blob';
+import { put, list, del, head } from '@vercel/blob';
 import type { User, CalendarWindow } from './definitions';
 
 // Import initial data from local JSON files
@@ -13,25 +13,32 @@ const WINDOWS_BLOB_NAME = 'windows.json';
 // Helper function to read a file from Vercel Blob storage
 async function readFileFromBlob<T>(fileName: string, initialData: T): Promise<T> {
   try {
-    const { blobs } = await list({ prefix: fileName, limit: 1 });
+    const headResult = await head(fileName).catch((error: any) => {
+        // head throws a 404 error if blob is not found, which is expected.
+        if (error.status === 404) {
+            return null;
+        }
+        throw error; // Re-throw other errors.
+    });
 
-    if (blobs.length === 0) {
+    if (!headResult) {
       console.log(`Blob '${fileName}' not found. Initializing with default data.`);
       await writeFileToBlob(fileName, initialData);
       return initialData;
     }
-
-    const blob = blobs[0];
-    const response = await fetch(blob.url);
+    
+    // The downloadUrl is the correct way to get a URL for fetching the content
+    const response = await fetch(headResult.downloadUrl);
     if (!response.ok) {
-        throw new Error(`Failed to fetch blob from ${blob.url}. Status: ${response.status}`);
+        throw new Error(`Failed to download file ${fileName}. Status: ${response.status}`);
     }
     const data = await response.json();
     return data as T;
+
   } catch (error) {
     console.error(`Failed to read or initialize blob '${fileName}':`, error);
-    // As a last resort, return the initial data if fetching fails,
-    // though this state shouldn't normally be reached.
+    // As a last resort, return the initial data if fetching fails.
+    // This could happen on Vercel during build if env vars are not yet available.
     return initialData;
   }
 }
@@ -42,6 +49,8 @@ async function writeFileToBlob<T>(fileName: string, data: T): Promise<void> {
     await put(fileName, JSON.stringify(data, null, 2), {
       access: 'public',
       contentType: 'application/json',
+      // The Vercel Blob storage is already connected, no need for a token here.
+      // The environment variable BLOB_READ_WRITE_TOKEN is used automatically by the `put` function.
     });
   } catch (error) {
     console.error(`Failed to write data to blob '${fileName}':`, error);
@@ -50,7 +59,7 @@ async function writeFileToBlob<T>(fileName: string, data: T): Promise<void> {
 }
 
 export async function getUsers(): Promise<User[]> {
-  return readFileFromBlob<User[]>(USERS_BLOB_NAME, initialUsers);
+  return readFileFromBlob<User[]>(USERS_BLOB_NAME, initialUsers as User[]);
 }
 
 export async function setUsers(users: User[]): Promise<void> {
@@ -58,7 +67,7 @@ export async function setUsers(users: User[]): Promise<void> {
 }
 
 export async function getWindows(): Promise<CalendarWindow[]> {
-  const windows = await readFileFromBlob<CalendarWindow[]>(WINDOWS_BLOB_NAME, initialWindows);
+  const windows = await readFileFromBlob<CalendarWindow[]>(WINDOWS_BLOB_NAME, initialWindows as CalendarWindow[]);
   return windows.sort((a, b) => a.day - b.day);
 }
 
