@@ -48,6 +48,7 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
     // Revalidate paths to reflect changes immediately
     if (key === 'users') {
         revalidatePath('/admin/users');
+        revalidatePath('/login');
     }
     if (key === 'windows') {
         revalidatePath('/admin/windows');
@@ -80,6 +81,21 @@ export async function login(prevState: any, formData: FormData) {
 
   try {
     const users = await getUsers();
+    
+    // **Temporary login fix for initial setup**
+    // If no users exist in the database, allow the default admin to log in
+    // to initialize the database.
+    if (users.length === 0 && username === 'admin' && password === 'password') {
+        console.log("Database is empty. Performing one-time login for admin to initialize.");
+        cookies().set("session", "admin", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            maxAge: 60 * 60 * 24 * 7, // One week
+            path: "/",
+        });
+        redirect("/admin");
+    }
+
     const user = users.find(u => u.username === username);
 
     if (!user || user.password !== password) {
@@ -236,6 +252,7 @@ export async function initializeDatabaseAction() {
         revalidatePath('/admin/users');
         revalidatePath('/admin/windows');
         revalidatePath('/');
+        revalidatePath('/login');
 
         return { isError: false, message: "Data byla úspěšně resetována." };
     } catch (error) {
