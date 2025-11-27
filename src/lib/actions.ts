@@ -7,7 +7,6 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { User, CalendarWindow } from "./definitions";
 import { getUsers, getWindows } from "./data";
-import { get } from "@vercel/edge-config";
 
 async function updateEdgeConfig<T>(key: 'users' | 'windows', value: T) {
     const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:9002';

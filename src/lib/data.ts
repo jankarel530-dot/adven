@@ -22,15 +22,17 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', value: T) {
     }
 }
 
+
 async function initializeData<T>(key: 'users' | 'windows', initialData: T): Promise<T> {
     try {
-        console.log(`Initializing ${key}...`);
+        console.log(`Initializing ${key} via API route...`);
         await updateEdgeConfig(key, initialData);
         console.log(`${key} initialized successfully.`);
         return initialData;
     } catch (error) {
         console.error(`Failed to initialize ${key}:`, error);
-        throw new Error(`Nepodařilo se inicializovat data pro ${key}.`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(`Nepodařilo se inicializovat data pro ${key}. Chyba: ${errorMessage}`);
     }
 }
 
