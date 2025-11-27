@@ -2,7 +2,6 @@
 import 'server-only';
 import { get } from '@vercel/edge-config';
 import type { User, CalendarWindow } from './definitions';
-import initialUsers from './data/users.json';
 
 // These functions now read data from Vercel Edge Config using the connection string.
 // The connection string must be stored in the `EDGE_CONFIG` environment variable.

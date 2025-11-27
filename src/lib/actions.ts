@@ -20,12 +20,17 @@ function getEdgeConfigId() {
     }
     // The format is edge_config_xxxxxxxx...
     // We can extract the ID from the URL part of the string
-    const url = new URL(connectionString);
-    const id = url.searchParams.get('id');
-    if (!id) {
-       throw new Error("Could not parse Edge Config ID from connection string.");
+    try {
+        const url = new URL(connectionString);
+        const id = url.searchParams.get('id');
+        if (!id) {
+           throw new Error("Could not parse Edge Config ID from connection string.");
+        }
+        return id;
+    } catch (e) {
+        console.error("Invalid connection string URL", e);
+        throw new Error("Invalid EDGE_CONFIG connection string format.");
     }
-    return id;
 }
 
 
@@ -91,7 +96,6 @@ export async function login(prevState: any, formData: FormData) {
 
   const { username, password } = validatedFields.data;
   let authenticatedUser: Omit<User, 'password'> | null = null;
-  let authError: string | null = null;
   
   try {
     const users = await getUsers();
