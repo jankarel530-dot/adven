@@ -74,40 +74,40 @@ export async function login(prevState: any, formData: FormData) {
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
+      message: "Chybně vyplněné údaje.",
     };
   }
   
   const { username, password } = validatedFields.data;
-  let authenticatedUser: Pick<User, 'username' | 'role'> | null = null;
-  let errorState: { message: string } | null = null;
-
+  let authenticatedUser: Omit<User, 'password'> | null = null;
+  
   try {
     const users = await getUsers();
     
     // Special case for initial setup if the database is empty
-    if (users.length === 0 && username === 'admin' && password === 'password') {
+    if (users.length === 0) {
+      if (username === 'admin' && password === 'password') {
         console.log("Database is empty. Authenticating admin for initialization.");
-        authenticatedUser = { username: 'admin', role: 'admin' };
+        authenticatedUser = { id: "0", username: 'admin', role: 'admin' };
+      }
     } else {
         const user = users.find(u => u.username === username);
-        if (!user || user.password !== password) {
-          errorState = { message: "Neplatné uživatelské jméno nebo heslo" };
-        } else {
-          authenticatedUser = { username: user.username, role: user.role };
+        if (user && user.password === password) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { password, ...userWithoutPassword } = user;
+          authenticatedUser = userWithoutPassword;
         }
     }
   } catch (error) {
     console.error("Login error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Během přihlášení došlo k neočekávané chybě.";
-    errorState = { message: errorMessage };
+    return { message: "Během přihlašování došlo k chybě serveru." };
   }
 
-  // If there was an error or authentication failed, return the message
-  if (errorState || !authenticatedUser) {
-    return errorState || { message: "Ověření se nezdařilo." };
+  if (!authenticatedUser) {
+    return { message: "Neplatné uživatelské jméno nebo heslo." };
   }
 
-  // If authentication was successful, set the cookie and redirect
+  // If authentication was successful, set the cookie and then redirect
   cookies().set("session", authenticatedUser.username, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -136,44 +136,44 @@ const userSchema = z.object({
 });
 
 export async function addUser(prevState: any, formData: FormData) {
-  const validatedFields = userSchema.safeParse(
-    Object.fromEntries(formData.entries())
-  );
-
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: "Zkontrolujte zadané údaje.",
-    };
-  }
-
-  const { username, password } = validatedFields.data;
-
   try {
-    const users = await getUsers();
+      const validatedFields = userSchema.safeParse(
+        Object.fromEntries(formData.entries())
+      );
 
-    if (users.find(u => u.username === username)) {
-      return {
-        errors: { username: ["Uživatel s tímto jménem již existuje."] },
-        message: "Uživatel s tímto jménem již existuje.",
+      if (!validatedFields.success) {
+        return {
+          errors: validatedFields.error.flatten().fieldErrors,
+          message: "Zkontrolujte zadané údaje.",
+        };
+      }
+
+      const { username, password } = validatedFields.data;
+      const users = await getUsers();
+
+      if (users.find(u => u.username === username)) {
+        return {
+          errors: { username: ["Uživatel s tímto jménem již existuje."] },
+          message: "Uživatel s tímto jménem již existuje.",
+        };
+      }
+
+      const newUser: User = {
+        id: new Date().getTime().toString(),
+        username,
+        password,
+        role: "user",
       };
-    }
 
-    const newUser: User = {
-      id: new Date().getTime().toString(),
-      username,
-      password,
-      role: "user",
-    };
-
-    const updatedUsers = [...users, newUser];
-    await updateEdgeConfig('users', updatedUsers);
-    
-    revalidatePath("/admin/users");
-    return { message: `Uživatel ${username} byl úspěšně vytvořen.` };
+      const updatedUsers = [...users, newUser];
+      await updateEdgeConfig('users', updatedUsers);
+      
+      revalidatePath("/admin/users");
+      return { message: `Uživatel ${username} byl úspěšně vytvořen.`, errors: null };
   } catch (error) {
     console.error("Failed to add user:", error);
-    return { message: "Nepodařilo se přidat uživatele." };
+    const message = error instanceof Error ? error.message : "Nepodařilo se přidat uživatele.";
+    return { message, errors: { server: [message] } };
   }
 }
 
@@ -203,8 +203,8 @@ export async function deleteUserAction(id: string) {
 const windowSchema = z.object({
   day: z.coerce.number().int().min(1).max(24),
   message: z.string().optional(),
-  imageUrl: z.string().url().or(z.literal("")),
-  videoUrl: z.string().url().or(z.literal("")),
+  imageUrl: z.string().url({ message: "Zadejte platnou URL adresu obrázku." }).or(z.literal("")),
+  videoUrl: z.string().url({ message: "Zadejte platnou URL pro video." }).or(z.literal("")),
   manualState: z.enum(["default", "unlocked", "locked"]),
 });
 
