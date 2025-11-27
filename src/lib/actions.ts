@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { User } from "./definitions";
+import type { User, CalendarWindow } from "./definitions";
 import { getUsers, getWindows } from "./data";
 import initialUsers from "./data/users.json";
 import initialWindows from "./data/windows.json";
@@ -15,17 +15,16 @@ import initialWindows from "./data/windows.json";
 async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
     const connectionString = process.env.EDGE_CONFIG;
      if (!connectionString) {
-        throw new Error("Missing EDGE_CONFIG environment variable.");
+        throw new Error("Chybějící proměnná prostředí EDGE_CONFIG.");
     }
     const vercelToken = process.env.VERCEL_API_TOKEN;
 
     if (!vercelToken) {
-        throw new Error("Missing VERCEL_API_TOKEN environment variable.");
+        throw new Error("Chybějící proměnná prostředí VERCEL_API_TOKEN.");
     }
-    
-    // We don't need to parse the ID, we can use the connection string directly
-    // to determine the config ID.
-    const configIdRes = await fetch(`https://api.vercel.com/v1/edge-config/find-by-connection-string`, {
+
+    const findIdUrl = `https://api.vercel.com/v1/edge-config/find-by-connection-string`;
+    const configIdRes = await fetch(findIdUrl, {
         method: "POST",
         headers: {
             Authorization: `Bearer ${vercelToken}`,
@@ -35,16 +34,15 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
     });
 
     if (!configIdRes.ok) {
-        const errorBody = await configIdRes.json();
-        console.error("Failed to find Edge Config ID:", errorBody);
-        throw new Error(`Failed to find Edge Config ID from connection string: ${errorBody.error?.message || 'Unknown API error'}`);
+        const errorBody = await configIdRes.text();
+        console.error("Chyba při hledání ID Edge Configu:", errorBody);
+        throw new Error(`Nepodařilo se najít ID Edge Configu: ${errorBody}`);
     }
     const {id: configId} = await configIdRes.json();
 
+    const updateUrl = `https://api.vercel.com/v1/edge-config/${configId}/items`;
 
-    const url = `https://api.vercel.com/v1/edge-config/${configId}/items`;
-
-    const response = await fetch(url, {
+    const response = await fetch(updateUrl, {
         method: "PATCH",
         headers: {
             Authorization: `Bearer ${vercelToken}`,
@@ -62,13 +60,11 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
     });
 
     if (!response.ok) {
-        const errorBody = await response.json();
-        console.error("Failed to update Edge Config:", errorBody);
-        throw new Error(`Failed to update Edge Config: ${errorBody.error?.message || 'Unknown API error'}`);
+        const errorBody = await response.text();
+        console.error("Chyba při aktualizaci Edge Configu:", errorBody);
+        throw new Error(`Nepodařilo se aktualizovat Edge Config: ${errorBody}`);
     }
 
-    // Revalidate paths to reflect changes immediately
-    revalidatePath('/admin', 'layout');
     revalidatePath('/', 'layout');
 
     return await response.json();
@@ -95,38 +91,32 @@ export async function login(prevState: any, formData: FormData) {
   }
 
   const { username, password } = validatedFields.data;
-  let authenticatedUser: User | null = null;
   
   try {
     const users = await getUsers();
-    
     const user = users.find(u => u.username === username);
-    if (user && user.password === password) {
-        authenticatedUser = user;
+
+    if (!user || user.password !== password) {
+        return { message: "Neplatné uživatelské jméno nebo heslo." };
     }
+  
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _, ...sessionData } = user;
+    
+    cookies().set("session", JSON.stringify(sessionData), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7, // One week
+      path: "/",
+    });
 
   } catch (error) {
-    console.error("Login error during data fetching:", error);
      const errorMessage = error instanceof Error ? error.message : "Během přihlašování došlo k chybě serveru.";
-     if (errorMessage.includes("connection string")) {
+     if (errorMessage.includes("EDGE_CONFIG")) {
          return { message: "Chyba připojení k databázi. Zkontrolujte nastavení proměnných prostředí na Vercelu." };
      }
      return { message: errorMessage };
   }
-
-  if (!authenticatedUser) {
-    return { message: "Neplatné uživatelské jméno nebo heslo." };
-  }
-  
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password: _, ...sessionData } = authenticatedUser;
-  
-  await cookies().set("session", JSON.stringify(sessionData), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 60 * 24 * 7, // One week
-    path: "/",
-  });
 
   redirect("/");
 }
@@ -233,7 +223,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
   const { day, ...dataToUpdate } = validatedFields.data;
 
   try {
-    let windows = await getWindows();
+    let windows: CalendarWindow[] = await getWindows();
     const windowIndex = windows.findIndex(w => w.day === day);
 
     if (windowIndex === -1) {
@@ -251,22 +241,4 @@ export async function updateWindow(prevState: any, formData: FormData) {
     console.error("Failed to update window:", error);
     return { message: `Nepodařilo se upravit den ${day}.` };
   }
-}
-
-export async function initializeDatabaseAction() {
-    try {
-        console.log("Initializing database with data from JSON files...");
-        await updateEdgeConfig('users', initialUsers);
-        await updateEdgeConfig('windows', initialWindows);
-        console.log("Database initialized successfully.");
-        
-        revalidatePath('/admin', 'layout');
-        revalidatePath('/', 'layout');
-
-        return { isError: false, message: "Data byla úspěšně resetována." };
-    } catch (error) {
-        console.error('Failed to initialize database:', error);
-        const message = error instanceof Error ? error.message : "Nepodařilo se resetovat data.";
-        return { isError: true, message };
-    }
 }

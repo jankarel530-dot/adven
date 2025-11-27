@@ -5,27 +5,19 @@ import type { User, CalendarWindow } from './definitions';
 import initialUsers from "./data/users.json";
 import initialWindows from "./data/windows.json";
 
-function getClient() {
-    const connectionString = process.env.EDGE_CONFIG;
-    if (!connectionString) {
-        throw new Error('@vercel/edge-config: No connection string provided. Please set the EDGE_CONFIG environment variable.');
-    }
-    return createClient(connectionString);
-}
-
-// This function is for internal use to write data, not for reading.
 async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
     const connectionString = process.env.EDGE_CONFIG;
      if (!connectionString) {
-        throw new Error("Missing EDGE_CONFIG environment variable.");
+        throw new Error("Chybějící proměnná prostředí EDGE_CONFIG.");
     }
     const vercelToken = process.env.VERCEL_API_TOKEN;
 
     if (!vercelToken) {
-        throw new Error("Missing VERCEL_API_TOKEN environment variable.");
+        throw new Error("Chybějící proměnná prostředí VERCEL_API_TOKEN.");
     }
     
-    const configIdRes = await fetch(`https://api.vercel.com/v1/edge-config/find-by-connection-string`, {
+    const findIdUrl = `https://api.vercel.com/v1/edge-config/find-by-connection-string`;
+    const configIdRes = await fetch(findIdUrl, {
         method: "POST",
         headers: {
             Authorization: `Bearer ${vercelToken}`,
@@ -35,15 +27,16 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
     });
 
     if (!configIdRes.ok) {
-        const errorBody = await configIdRes.json();
-        throw new Error(`Failed to find Edge Config ID from connection string: ${errorBody.error?.message || 'Unknown API error'}`);
+        const errorBody = await configIdRes.text();
+        console.error("Chyba při hledání ID Edge Configu:", errorBody);
+        throw new Error(`Nepodařilo se najít ID Edge Configu: ${errorBody}`);
     }
     const {id: configId} = await configIdRes.json();
 
 
-    const url = `https://api.vercel.com/v1/edge-config/${configId}/items`;
+    const updateUrl = `https://api.vercel.com/v1/edge-config/${configId}/items`;
 
-    const response = await fetch(url, {
+    const response = await fetch(updateUrl, {
         method: "PATCH",
         headers: {
             Authorization: `Bearer ${vercelToken}`,
@@ -61,27 +54,31 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
     });
 
     if (!response.ok) {
-        const errorBody = await response.json();
-        throw new Error(`Failed to update Edge Config: ${errorBody.error?.message || 'Unknown API error'}`);
+        const errorBody = await response.text();
+        console.error("Chyba při aktualizaci Edge Configu:", errorBody);
+        throw new Error(`Nepodařilo se aktualizovat Edge Config: ${errorBody}`);
     }
 
     return await response.json();
 }
 
-
 export async function getUsers(): Promise<User[]> {
-    const client = getClient();
+    const connectionString = process.env.EDGE_CONFIG;
+    if (!connectionString) {
+        throw new Error('@vercel/edge-config: No connection string provided. Please set the EDGE_CONFIG environment variable.');
+    }
+    const client = createClient(connectionString);
     let users = await client.get<User[]>('users');
     
-    // If no users found, initialize with default users and return them
     if (!users || users.length === 0) {
-        console.log("No users found in Edge Config, initializing with default data.");
+        console.log("Žádní uživatelé v Edge Configu, inicializuji výchozí data.");
         try {
             await updateEdgeConfig('users', initialUsers);
+            console.log("Výchozí uživatelé úspěšně nahráni.");
             return initialUsers as User[];
         } catch (error) {
-            console.error("Failed to initialize users in Edge Config:", error);
-            throw error;
+            console.error("Nepodařilo se inicializovat uživatele v Edge Config:", error);
+            throw error; // Re-throw the error to be caught by the caller
         }
     }
     
@@ -89,17 +86,21 @@ export async function getUsers(): Promise<User[]> {
 }
 
 export async function getWindows(): Promise<CalendarWindow[]> {
-    const client = getClient();
+    const connectionString = process.env.EDGE_CONFIG;
+    if (!connectionString) {
+        throw new Error('@vercel/edge-config: No connection string provided. Please set the EDGE_CONFIG environment variable.');
+    }
+    const client = createClient(connectionString);
     let windows = await client.get<CalendarWindow[]>('windows');
 
-    // If no windows found, initialize with default windows and return them
     if (!windows || windows.length === 0) {
-        console.log("No windows found in Edge Config, initializing with default data.");
+        console.log("Žádná okénka v Edge Configu, inicializuji výchozí data.");
         try {
             await updateEdgeConfig('windows', initialWindows);
+            console.log("Výchozí okénka úspěšně nahrána.");
             return initialWindows as CalendarWindow[];
         } catch(error) {
-            console.error("Failed to initialize windows in Edge Config:", error);
+            console.error("Nepodařilo se inicializovat okénka v Edge Config:", error);
             throw error;
         }
     }
