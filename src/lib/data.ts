@@ -1,15 +1,25 @@
 
 import 'server-only';
-import { get } from '@vercel/edge-config';
+import { createClient } from '@vercel/edge-config';
 import type { User, CalendarWindow } from './definitions';
 
 // These functions now read data from Vercel Edge Config using the connection string.
 // The connection string must be stored in the `EDGE_CONFIG` environment variable.
 
+function getClient() {
+    const connectionString = process.env.EDGE_CONFIG;
+    if (!connectionString) {
+        // This will provide a clear error if the environment variable is missing.
+        throw new Error('@vercel/edge-config: No connection string provided. Please set the EDGE_CONFIG environment variable.');
+    }
+    return createClient(connectionString);
+}
+
+
 export async function getUsers(): Promise<User[]> {
     try {
-        // The `get` function automatically uses the `EDGE_CONFIG` environment variable.
-        const users = await get<User[]>('users');
+        const client = getClient();
+        const users = await client.get<User[]>('users');
         // If the store is new and 'users' key doesn't exist, it returns undefined.
         if (!users) {
             console.log("No users found in Edge Config, returning empty array.");
@@ -26,7 +36,8 @@ export async function getUsers(): Promise<User[]> {
 
 export async function getWindows(): Promise<CalendarWindow[]> {
     try {
-        const windows = await get<CalendarWindow[]>('windows');
+        const client = getClient();
+        const windows = await client.get<CalendarWindow[]>('windows');
         if (!windows) {
             console.log("No windows found in Edge Config, returning empty array.");
             return [];

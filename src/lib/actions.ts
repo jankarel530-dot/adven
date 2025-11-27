@@ -287,5 +287,3 @@ export async function initializeDatabaseAction() {
         return { isError: true, message };
     }
 }
-
-    
