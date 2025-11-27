@@ -39,7 +39,8 @@ export async function login(prevState: any, formData: FormData) {
       path: "/",
     });
   } catch (error) {
-    return { message: "An unexpected error occurred." };
+    console.error("Login error:", error);
+    return { message: "An unexpected error occurred during login." };
   }
 
   redirect("/");
@@ -68,24 +69,34 @@ export async function addUser(prevState: any, formData: FormData) {
   }
 
   const { username, password } = validatedFields.data;
+  
+  try {
+    const existingUser = await findUserByUsername(username);
+    if (existingUser) {
+      return { message: "Username already exists", errors: { username: ["Username already taken"] } };
+    }
 
-  const existingUser = await findUserByUsername(username);
-  if (existingUser) {
-    return { message: "Username already exists", errors: { username: ["Username already taken"] } };
+    await dbAddUser({ username, password });
+    revalidatePath("/admin/users");
+    return { message: `User ${username} created successfully.` };
+  } catch (error) {
+    console.error("Add user error:", error);
+    return { message: "Failed to create user.", errors: {} };
   }
-
-  await dbAddUser({ username, password });
-  revalidatePath("/admin/users");
-  return { message: `User ${username} created successfully.` };
 }
 
 export async function deleteUserAction(id: string) {
-    const error = await dbDeleteUser(id);
-    if (error) {
-        return { message: error.message, isError: true };
+    try {
+      const error = await dbDeleteUser(id);
+      if (error) {
+          return { message: error.message, isError: true };
+      }
+      revalidatePath('/admin/users');
+      return { message: 'User deleted successfully.', isError: false };
+    } catch (error) {
+       console.error("Delete user error:", error);
+       return { message: 'Failed to delete user.', isError: true };
     }
-    revalidatePath('/admin/users');
-    return { message: 'User deleted successfully.', isError: false };
 }
 
 
@@ -118,6 +129,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
         return { message: `Window for day ${day} updated.` };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+        console.error("Update window error:", error);
         return { message: `Failed to update window: ${errorMessage}` };
     }
 }
@@ -126,8 +138,8 @@ export async function updateWindow(prevState: any, formData: FormData) {
 export async function initializeDatabaseAction() {
     try {
       await initializeData();
-      revalidatePath('/admin');
-      revalidatePath('/');
+      revalidatePath('/admin', 'layout');
+      revalidatePath('/', 'layout');
       return { success: true };
     } catch(e) {
       console.error(e);
