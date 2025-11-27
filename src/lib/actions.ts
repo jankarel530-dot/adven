@@ -9,46 +9,29 @@ import type { User, CalendarWindow } from "./definitions";
 import { getUsers, getWindows } from "./data";
 import initialUsers from "./data/users.json";
 import initialWindows from "./data/windows.json";
+import { createClient } from "@vercel/edge-config";
 
 // --- Vercel Edge Config Update Function ---
-
-// Extracts the Edge Config ID from the connection string
-function getEdgeConfigId(connectionString: string) {
-    if (!connectionString) {
-        throw new Error("Missing connection string.");
-    }
-    try {
-        const url = new URL(connectionString);
-        const id = url.searchParams.get('id');
-        if (!id) {
-           throw new Error("Could not parse Edge Config ID from connection string.");
-        }
-        return id;
-    } catch (e) {
-        // Fallback for when the connection string is just the ID itself
-        if (connectionString.startsWith('ecfg_')) {
-            const idPart = connectionString.split('?')[0];
-            const urlParts = idPart.split('/');
-            return urlParts[urlParts.length - 1];
-        }
-        throw new Error("Invalid connection string format.");
-    }
-}
-
 
 async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
     const connectionString = process.env.EDGE_CONFIG;
      if (!connectionString) {
         throw new Error("Missing EDGE_CONFIG environment variable.");
     }
-    const edgeConfigId = getEdgeConfigId(connectionString);
     const vercelToken = process.env.VERCEL_API_TOKEN;
 
     if (!vercelToken) {
         throw new Error("Missing VERCEL_API_TOKEN environment variable.");
     }
+    
+    // Use the client to get the Edge Config ID
+    const client = createClient(connectionString);
+    const configId = await client.getConfigId();
+    if (!configId) {
+        throw new Error("Could not determine Edge Config ID from connection string.");
+    }
 
-    const url = `https://api.vercel.com/v1/edge-config/${edgeConfigId}/items`;
+    const url = `https://api.vercel.com/v1/edge-config/${configId}/items`;
 
     const response = await fetch(url, {
         method: "PATCH",
@@ -101,44 +84,46 @@ export async function login(prevState: any, formData: FormData) {
   }
 
   const { username, password } = validatedFields.data;
+  let authenticatedUser: User | null = null;
   
   try {
     const users = await getUsers();
-    let authenticatedUser: User | null = null;
     
     if (!users || users.length === 0) {
-      if (username === 'admin' && password === 'password') {
-        console.log("Database is empty. Authenticating admin for initialization.");
-        authenticatedUser = { id: "0", username: 'admin', role: 'admin', password: 'password' };
-      }
+        // If storage is empty, it can be initialized with default admin
+        if (username === 'admin' && password === 'password') {
+            console.log("Database is empty. Authenticating admin for initialization.");
+            authenticatedUser = { id: "0", username: 'admin', role: 'admin', password: 'password' };
+        }
     } else {
         const user = users.find(u => u.username === username);
         if (user && user.password === password) {
           authenticatedUser = user;
         }
     }
-
-    if (!authenticatedUser) {
-      return { message: "Neplatné uživatelské jméno nebo heslo." };
-    }
-  
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...sessionData } = authenticatedUser;
-    
-    await cookies().set("session", JSON.stringify(sessionData), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7, // One week
-      path: "/",
-    });
-
   } catch (error) {
-    console.error("Login error:", error);
-    if (error instanceof Error && error.message.includes("No connection string provided")) {
-       return { message: "Chyba připojení k databázi. Zkontrolujte nastavení proměnné EDGE_CONFIG na Vercelu." };
-    }
-    return { message: "Během přihlašování došlo k chybě serveru." };
+    console.error("Login error during data fetching:", error);
+     const errorMessage = error instanceof Error ? error.message : "Během přihlašování došlo k chybě serveru.";
+     // Return specific user-friendly messages for known issues
+     if (errorMessage.includes("connection string")) {
+         return { message: "Chyba připojení k databázi. Zkontrolujte nastavení proměnných prostředí na Vercelu." };
+     }
+     return { message: errorMessage };
   }
+
+  if (!authenticatedUser) {
+    return { message: "Neplatné uživatelské jméno nebo heslo." };
+  }
+  
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password: _, ...sessionData } = authenticatedUser;
+  
+  await cookies().set("session", JSON.stringify(sessionData), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 7, // One week
+    path: "/",
+  });
 
   redirect("/");
 }
@@ -270,7 +255,7 @@ export async function initializeDatabaseAction() {
     try {
         console.log("Initializing database with data from JSON files...");
         await updateEdgeConfig('users', initialUsers);
-        await updateEdgeConfig('windows', initialWindows);
+        await updateEdge činnost s 'windows', initialWindows);
         console.log("Database initialized successfully.");
         
         // Use 'layout' revalidation to be sure all data is fresh
