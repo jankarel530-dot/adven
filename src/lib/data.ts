@@ -10,25 +10,62 @@ import initialWindows from './data/windows.json';
 const USERS_BLOB_NAME = 'users.json';
 const WINDOWS_BLOB_NAME = 'windows.json';
 
+// Helper to get the base URL for the API
+function getBaseUrl() {
+    if (process.env.VERCEL_URL) {
+        return `https://${process.env.VERCEL_URL}`;
+    }
+    // Assume localhost for development
+    return 'http://localhost:9002'; 
+}
+
+// Helper function to write data to Vercel Blob via our API route
+async function setBlobData<T>(fileName: string, data: T): Promise<void> {
+    const baseUrl = getBaseUrl();
+    const url = `${baseUrl}/api/update-blob?filename=${fileName}`;
+    
+    if (!process.env.BLOB_API_TOKEN) {
+        throw new Error("BLOB_API_TOKEN is not set.");
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain',
+                'x-api-token': process.env.BLOB_API_TOKEN,
+            },
+            body: JSON.stringify(data, null, 2),
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`Failed to set blob data for ${fileName}. Status: ${response.status}. Body: ${errorBody}`);
+        }
+    } catch (error) {
+        console.error(`Error in setBlobData for ${fileName}:`, error);
+        throw error;
+    }
+}
+
+
 // Helper function to read a file from Vercel Blob storage
 async function readFileFromBlob<T>(fileName: string, initialData: T): Promise<T> {
   try {
-    const headResult = await head(fileName).catch((error: any) => {
-        // head throws a 404 error if blob is not found, which is expected.
+    const blobInfo = await head(fileName).catch((error: any) => {
         if (error.status === 404) {
             return null;
         }
-        throw error; // Re-throw other errors.
+        throw error;
     });
 
-    if (!headResult) {
+    if (!blobInfo) {
       console.log(`Blob '${fileName}' not found. Initializing with default data.`);
-      await writeFileToBlob(fileName, initialData);
+      await setBlobData(fileName, initialData);
       return initialData;
     }
     
-    // Use the downloadUrl to fetch the content, ensuring no caching.
-    const response = await fetch(headResult.downloadUrl, { cache: 'no-store' });
+    const response = await fetch(blobInfo.url, { cache: 'no-store' });
 
     if (!response.ok) {
         throw new Error(`Failed to download file ${fileName}. Status: ${response.status}`);
@@ -38,31 +75,17 @@ async function readFileFromBlob<T>(fileName: string, initialData: T): Promise<T>
 
   } catch (error) {
     console.error(`Failed to read or initialize blob '${fileName}':`, error);
-    // As a last resort, return the initial data if fetching fails.
-    // This could happen on Vercel during build if env vars are not yet available.
-    return initialData;
+    throw new Error(`Nepodařilo se načíst data pro ${fileName}. Původní chyba: ${error instanceof Error ? error.message : "Neznámá chyba"}`);
   }
 }
 
-// Helper function to write a file to Vercel Blob storage
-async function writeFileToBlob<T>(fileName: string, data: T): Promise<void> {
-  try {
-    await put(fileName, JSON.stringify(data, null, 2), {
-      access: 'public',
-      contentType: 'application/json',
-    });
-  } catch (error) {
-    console.error(`Failed to write data to blob '${fileName}':`, error);
-    throw new Error(`Nepodařilo se zapsat data do úložiště pro ${fileName}.`);
-  }
-}
 
 export async function getUsers(): Promise<User[]> {
   return readFileFromBlob<User[]>(USERS_BLOB_NAME, initialUsers as User[]);
 }
 
 export async function setUsers(users: User[]): Promise<void> {
-  return writeFileToBlob(USERS_BLOB_NAME, users);
+  return setBlobData(USERS_BLOB_NAME, users);
 }
 
 export async function getWindows(): Promise<CalendarWindow[]> {
@@ -71,5 +94,5 @@ export async function getWindows(): Promise<CalendarWindow[]> {
 }
 
 export async function setWindows(windows: CalendarWindow[]): Promise<void> {
-  return writeFileToBlob(WINDOWS_BLOB_NAME, windows);
+  return setBlobData(WINDOWS_BLOB_NAME, windows);
 }

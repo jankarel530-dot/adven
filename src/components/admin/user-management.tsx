@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
@@ -109,7 +110,7 @@ function AddUserForm() {
 
   useEffect(() => {
     if (state?.message) {
-      if (state.errors) {
+      if (state.isError || state.errors) {
         toast({ title: "Chyba", description: state.message, variant: "destructive" });
       } else {
         toast({ title: "Úspěch", description: state.message });
@@ -151,12 +152,6 @@ function AddUserForm() {
             </div>
           </div>
           <SubmitButton />
-           {state?.message && !state.errors && (
-            <p className="text-sm text-green-600">{state.message}</p>
-          )}
-          {state?.message && state.errors && (
-            <p className="text-sm text-destructive">{state.message}</p>
-          )}
         </form>
       </CardContent>
     </Card>

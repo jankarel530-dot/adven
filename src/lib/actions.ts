@@ -102,7 +102,7 @@ export async function addUser(prevState: any, formData: FormData) {
       const updatedUsers = [...users, newUser];
       await setUsers(updatedUsers);
       
-      return { message: `Uživatel ${username} byl úspěšně vytvořen.`, errors: null };
+      return { message: `Uživatel ${username} byl úspěšně vytvořen.`, errors: null, isError: false };
   } catch (error) {
     console.error("Failed to add user:", error);
     const message = error instanceof Error ? error.message : "Nepodařilo se přidat uživatele.";
@@ -152,6 +152,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
       message: "Neplatná data pro okénko.",
+      isError: true,
     };
   }
   
@@ -162,7 +163,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
     const windowIndex = windows.findIndex(w => w.day === day);
 
     if (windowIndex === -1) {
-      return { message: `Chyba: Okénko pro den ${day} nebylo nalezeno.` };
+      return { message: `Chyba: Okénko pro den ${day} nebylo nalezeno.`, isError: true };
     }
     
     const existingWindow = windows[windowIndex];
@@ -170,7 +171,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
 
     await setWindows(windows);
     
-    return { message: `Den ${day} byl úspěšně upraven.` };
+    return { message: `Den ${day} byl úspěšně upraven.`, isError: false };
   } catch (error) {
     console.error("Failed to update window:", error);
     const message = error instanceof Error ? error.message : "An unknown error occurred.";
