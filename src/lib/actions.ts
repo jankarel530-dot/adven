@@ -69,6 +69,7 @@ const userSchema = z.object({
 });
 
 export async function addUser(prevState: any, formData: FormData) {
+  revalidatePath('/', 'layout');
   try {
       const validatedFields = userSchema.safeParse(
         Object.fromEntries(formData.entries())
@@ -101,7 +102,6 @@ export async function addUser(prevState: any, formData: FormData) {
       const updatedUsers = [...users, newUser];
       await setUsers(updatedUsers);
       
-      revalidatePath("/admin/users");
       return { message: `Uživatel ${username} byl úspěšně vytvořen.`, errors: null };
   } catch (error) {
     console.error("Failed to add user:", error);
@@ -111,6 +111,7 @@ export async function addUser(prevState: any, formData: FormData) {
 }
 
 export async function deleteUserAction(id: string) {
+    revalidatePath('/', 'layout');
     try {
         let users = await getUsers();
         const userToDelete = users.find(u => u.id === id);
@@ -125,7 +126,6 @@ export async function deleteUserAction(id: string) {
         const updatedUsers = users.filter(u => u.id !== id);
         await setUsers(updatedUsers);
         
-        revalidatePath('/admin/users');
         return { isError: false, message: `Uživatel ${userToDelete.username} byl smazán.` };
     } catch (error) {
         console.error('Failed to delete user:', error);
@@ -142,6 +142,7 @@ const windowSchema = z.object({
 });
 
 export async function updateWindow(prevState: any, formData: FormData) {
+  revalidatePath('/', 'layout');
   const validatedFields = windowSchema.safeParse(
     Object.fromEntries(formData.entries())
   );
@@ -169,8 +170,6 @@ export async function updateWindow(prevState: any, formData: FormData) {
 
     await setWindows(windows);
     
-    revalidatePath("/admin/windows");
-    revalidatePath("/");
     return { message: `Den ${day} byl úspěšně upraven.` };
   } catch (error) {
     console.error("Failed to update window:", error);

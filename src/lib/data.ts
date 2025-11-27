@@ -1,6 +1,6 @@
 
 import 'server-only';
-import { put, list, del, head } from '@vercel/blob';
+import { put, head } from '@vercel/blob';
 import type { User, CalendarWindow } from './definitions';
 
 // Import initial data from local JSON files
@@ -27,8 +27,9 @@ async function readFileFromBlob<T>(fileName: string, initialData: T): Promise<T>
       return initialData;
     }
     
-    // The downloadUrl is the correct way to get a URL for fetching the content
-    const response = await fetch(headResult.downloadUrl);
+    // Use the downloadUrl to fetch the content, ensuring no caching.
+    const response = await fetch(headResult.downloadUrl, { cache: 'no-store' });
+
     if (!response.ok) {
         throw new Error(`Failed to download file ${fileName}. Status: ${response.status}`);
     }
@@ -49,8 +50,6 @@ async function writeFileToBlob<T>(fileName: string, data: T): Promise<void> {
     await put(fileName, JSON.stringify(data, null, 2), {
       access: 'public',
       contentType: 'application/json',
-      // The Vercel Blob storage is already connected, no need for a token here.
-      // The environment variable BLOB_READ_WRITE_TOKEN is used automatically by the `put` function.
     });
   } catch (error) {
     console.error(`Failed to write data to blob '${fileName}':`, error);
