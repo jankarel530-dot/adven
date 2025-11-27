@@ -18,8 +18,6 @@ function getEdgeConfigId() {
     if (!connectionString) {
         throw new Error("Missing EDGE_CONFIG environment variable.");
     }
-    // The format is "edge_config_xxxxxxxx..."
-    // We can extract the ID from the URL part of the string
     try {
         const url = new URL(connectionString);
         const id = url.searchParams.get('id');
@@ -29,9 +27,11 @@ function getEdgeConfigId() {
         return id;
     } catch (e) {
         console.error("Invalid connection string URL, attempting direct parse", e);
-        // Fallback for when the connection string is just the ID itself in some formats
+        // Fallback for when the connection string is just the ID itself
         if (connectionString.startsWith('ecfg_')) {
-            return connectionString.split('?')[0];
+            const idPart = connectionString.split('?')[0];
+            const urlParts = idPart.split('/');
+            return urlParts[urlParts.length - 1];
         }
         throw new Error("Invalid EDGE_CONFIG connection string format.");
     }
@@ -130,7 +130,8 @@ export async function login(prevState: any, formData: FormData) {
     return { message: "Neplatné uživatelské jméno nebo heslo." };
   }
   
-  // If authentication is successful, set the cookie and redirect
+  // If authentication is successful, set the cookie and then redirect.
+  // This must be outside the try-catch block.
   cookies().set("session", authenticatedUser.username, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -286,3 +287,5 @@ export async function initializeDatabaseAction() {
         return { isError: true, message };
     }
 }
+
+    
