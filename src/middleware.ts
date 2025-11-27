@@ -8,11 +8,11 @@ const PUBLIC_FILE = /\.(.*)$/;
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // This is a workaround to allow static files to be served
+  // This is a workaround to allow static files and API routes to be served.
   // It's not ideal, but it works for this scaffold.
   if (
       pathname.startsWith('/_next') ||
-      pathname.startsWith('/api') ||
+      pathname.startsWith('/api') || // Allow API routes
       pathname.startsWith('/static') ||
       PUBLIC_FILE.test(pathname)
   ) {
