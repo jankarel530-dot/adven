@@ -5,6 +5,7 @@ import type { User, CalendarWindow } from './definitions';
 
 // These functions now read data from Vercel Edge Config.
 // The data is stored as JSON strings under the keys 'users' and 'windows'.
+// The `get` function automatically uses the `EDGE_CONFIG` environment variable.
 
 export async function getUsers(): Promise<User[]> {
     try {
@@ -15,7 +16,9 @@ export async function getUsers(): Promise<User[]> {
         }
         return users;
     } catch (error) {
+        // This error will fire if the connection string is missing.
         console.error("Error fetching users from Edge Config:", error);
+        // Return empty array to prevent app from crashing if store is unlinked.
         return [];
     }
 }

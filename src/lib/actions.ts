@@ -46,14 +46,8 @@ async function updateEdgeConfig<T>(key: 'users' | 'windows', data: T) {
     }
 
     // Revalidate paths to reflect changes immediately
-    if (key === 'users') {
-        revalidatePath('/admin/users');
-        revalidatePath('/login');
-    }
-    if (key === 'windows') {
-        revalidatePath('/admin/windows');
-        revalidatePath('/');
-    }
+    revalidatePath('/admin', true);
+    revalidatePath('/', true);
 
     return await response.json();
 }
@@ -107,7 +101,6 @@ export async function login(prevState: any, formData: FormData) {
     return { message: "Neplatné uživatelské jméno nebo heslo." };
   }
 
-  // If authentication was successful, set the cookie and then redirect
   cookies().set("session", authenticatedUser.username, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -252,10 +245,9 @@ export async function initializeDatabaseAction() {
         await updateEdgeConfig('windows', initialWindows);
         console.log("Database initialized successfully.");
         
-        revalidatePath('/admin/users');
-        revalidatePath('/admin/windows');
-        revalidatePath('/');
-        revalidatePath('/login');
+        revalidatePath('/admin/users', 'layout');
+        revalidatePath('/admin/windows', 'layout');
+        revalidatePath('/', 'layout');
 
         return { isError: false, message: "Data byla úspěšně resetována." };
     } catch (error) {
