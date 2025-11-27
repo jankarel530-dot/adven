@@ -1,11 +1,46 @@
+
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { findUserByUsername, addUser as dbAddUser, updateWindow as dbUpdateWindow, deleteUser as dbDeleteUser, initializeData } from "./data";
-import type { CalendarWindow } from "./definitions";
+import type { CalendarWindow, User } from "./definitions";
+import { Octokit } from "octokit";
+import initialUsers from './data/users.json';
+import initialWindows from './data/windows.json';
+
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+const owner = process.env.GITHUB_REPO_OWNER!;
+const repo = process.env.GITHUB_REPO_NAME!;
+
+async function getFile(path: string): Promise<{ content: string; sha: string }> {
+  const { data } = await octokit.rest.repos.getContent({
+    owner,
+    repo,
+    path,
+  });
+
+  if (Array.isArray(data) || !("content" in data)) {
+    throw new Error(`Could not retrieve file content for ${path}`);
+  }
+
+  return { content: Buffer.from(data.content, "base64").toString(), sha: data.sha };
+}
+
+async function updateFile(path: string, content: string, sha: string, commitMessage: string): Promise<void> {
+  await octokit.rest.repos.createOrUpdateFileContents({
+    owner,
+    repo,
+    path,
+    message: commitMessage,
+    content: Buffer.from(content).toString("base64"),
+    sha,
+  });
+}
+
+
+// --- AUTH ACTIONS ---
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -26,10 +61,12 @@ export async function login(prevState: any, formData: FormData) {
   const { username, password } = validatedFields.data;
 
   try {
-    const user = await findUserByUsername(username);
+    const { content: usersContent } = await getFile('src/lib/data/users.json');
+    const users: User[] = JSON.parse(usersContent);
+    const user = users.find(u => u.username === username);
 
     if (!user || user.password !== password) {
-      return { message: "Invalid username or password" };
+      return { message: "Neplatné uživatelské jméno nebo heslo" };
     }
 
     cookies().set("session", user.username, {
@@ -40,7 +77,7 @@ export async function login(prevState: any, formData: FormData) {
     });
   } catch (error) {
     console.error("Login error:", error);
-    return { message: "An unexpected error occurred during login." };
+    return { message: "Během přihlášení došlo k neočekávané chybě." };
   }
 
   redirect("/");
@@ -51,9 +88,12 @@ export async function logout() {
   redirect("/login");
 }
 
+
+// --- DATA-MODIFYING ACTIONS ---
+
 const addUserSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  username: z.string().min(3, "Uživatelské jméno musí mít alespoň 3 znaky"),
+  password: z.string().min(6, "Heslo musí mít alespoň 6 znaků"),
 });
 
 export async function addUser(prevState: any, formData: FormData) {
@@ -64,49 +104,69 @@ export async function addUser(prevState: any, formData: FormData) {
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Validation failed."
+      message: "Ověření se nezdařilo."
     };
   }
 
-  const { username, password } = validatedFields.data;
-  
   try {
-    const existingUser = await findUserByUsername(username);
-    if (existingUser) {
-      return { message: "Username already exists", errors: { username: ["Username already taken"] } };
+    const { content: usersContent, sha } = await getFile('src/lib/data/users.json');
+    const users: User[] = JSON.parse(usersContent);
+    
+    const { username, password } = validatedFields.data;
+
+    if (users.some(u => u.username === username)) {
+      return { message: "Uživatelské jméno již existuje", errors: { username: ["Uživatelské jméno je již obsazené"] } };
     }
 
-    await dbAddUser({ username, password });
+    const newUser: User = {
+      id: String(Date.now()),
+      username,
+      password,
+      role: 'user',
+    };
+    users.push(newUser);
+
+    await updateFile('src/lib/data/users.json', JSON.stringify(users, null, 2), sha, `feat: Add user ${username}`);
     revalidatePath("/admin/users");
-    return { message: `User ${username} created successfully.` };
+    return { message: `Uživatel ${username} byl úspěšně vytvořen.` };
   } catch (error) {
     console.error("Add user error:", error);
-    return { message: "Failed to create user.", errors: {} };
+    return { message: "Nepodařilo se vytvořit uživatele.", errors: {} };
   }
 }
 
 export async function deleteUserAction(id: string) {
     try {
-      const error = await dbDeleteUser(id);
-      if (error) {
-          return { message: error.message, isError: true };
+      const { content: usersContent, sha } = await getFile('src/lib/data/users.json');
+      const users: User[] = JSON.parse(usersContent);
+
+      const userToDelete = users.find(u => u.id === id);
+      if (!userToDelete) {
+        return { message: "Uživatel nenalezen", isError: true };
       }
+      if (userToDelete.role === 'admin') {
+        return { message: "Nelze smazat administrátora", isError: true };
+      }
+      
+      const updatedUsers = users.filter(u => u.id !== id);
+      await updateFile('src/lib/data/users.json', JSON.stringify(updatedUsers, null, 2), sha, `feat: Delete user ${userToDelete.username}`);
+      
       revalidatePath('/admin/users');
-      return { message: 'User deleted successfully.', isError: false };
+      return { message: 'Uživatel úspěšně smazán.', isError: false };
     } catch (error) {
        console.error("Delete user error:", error);
-       return { message: 'Failed to delete user.', isError: true };
+       return { message: 'Nepodařilo se smazat uživatele.', isError: true };
     }
 }
 
 
 const updateWindowSchema = z.object({
     day: z.coerce.number(),
-    message: z.string().min(1, "Message cannot be empty"),
-    imageUrl: z.string().url("Must be a valid URL if provided").optional().or(z.literal('')),
-    videoUrl: z.string().url("Must be a valid URL if provided").optional().or(z.literal('')),
+    message: z.string().min(1, "Zpráva nesmí být prázdná"),
+    imageUrl: z.string().url("Musí být platná URL, pokud je zadána").optional().or(z.literal('')),
+    videoUrl: z.string().url("Musí být platná URL, pokud je zadána").optional().or(z.literal('')),
     manualState: z.enum(["default", "unlocked", "locked"]),
-})
+});
 
 export async function updateWindow(prevState: any, formData: FormData) {
     const validatedFields = updateWindowSchema.safeParse(
@@ -116,28 +176,47 @@ export async function updateWindow(prevState: any, formData: FormData) {
     if (!validatedFields.success) {
         return {
             errors: validatedFields.error.flatten().fieldErrors,
-            message: "Validation failed."
+            message: "Ověření se nezdařilo."
         };
     }
     
     const { day, ...data } = validatedFields.data;
     
     try {
-        await dbUpdateWindow(day, data as Partial<CalendarWindow>);
+        const { content: windowsContent, sha } = await getFile('src/lib/data/windows.json');
+        const windows: CalendarWindow[] = JSON.parse(windowsContent);
+        
+        const windowIndex = windows.findIndex(w => w.day === day);
+        if (windowIndex === -1) {
+            return { message: "Okénko nebylo nalezeno." };
+        }
+
+        const existingWindow = windows[windowIndex];
+        const imageHint = data.imageUrl === existingWindow.imageUrl ? existingWindow.imageHint : 'custom image';
+        
+        windows[windowIndex] = { ...existingWindow, ...data, imageHint };
+
+        await updateFile('src/lib/data/windows.json', JSON.stringify(windows, null, 2), sha, `feat: Update content for day ${day}`);
+
         revalidatePath("/admin/windows");
         revalidatePath("/");
-        return { message: `Window for day ${day} updated.` };
+        return { message: `Okénko pro den ${day} bylo aktualizováno.` };
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+        const errorMessage = error instanceof Error ? error.message : "Došlo k neznámé chybě";
         console.error("Update window error:", error);
-        return { message: `Failed to update window: ${errorMessage}` };
+        return { message: `Nepodařilo se aktualizovat okénko: ${errorMessage}` };
     }
 }
 
-
 export async function initializeDatabaseAction() {
     try {
-      await initializeData();
+      // This action now resets the content of the files in GitHub to their initial state.
+      const { sha: usersSha } = await getFile('src/lib/data/users.json');
+      await updateFile('src/lib/data/users.json', JSON.stringify(initialUsers, null, 2), usersSha, 'chore: Reset user data to initial state');
+
+      const { sha: windowsSha } = await getFile('src/lib/data/windows.json');
+      await updateFile('src/lib/data/windows.json', JSON.stringify(initialWindows, null, 2), windowsSha, 'chore: Reset window data to initial state');
+
       revalidatePath('/admin', 'layout');
       revalidatePath('/', 'layout');
       return { success: true };

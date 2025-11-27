@@ -1,62 +1,35 @@
-import 'server-only';
-import { db } from './firebase';
-import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  setDoc,
-  deleteDoc,
-  writeBatch,
-  query,
-  where,
-  orderBy
-} from 'firebase/firestore';
 
+import 'server-only';
 import type { User, CalendarWindow } from './definitions';
+
 import initialUsers from './data/users.json';
 import initialWindows from './data/windows.json';
 
-const usersCollection = collection(db, 'users');
-const windowsCollection = collection(db, 'windows');
+// In a real serverless environment, this in-memory cache might not be reliable across requests.
+// However, since Vercel rebuilds the app on every commit, and our actions commit to git,
+// the `initialUsers` and `initialWindows` will be the latest version on each new build.
+// These functions will read from the file system of the build container.
+let users: User[] = initialUsers;
+let windows: CalendarWindow[] = initialWindows.sort((a, b) => a.day - b.day);
 
-export async function initializeData() {
-    console.log("Initializing Firestore with default data...");
-    const batch = writeBatch(db);
-
-    // Initialize users
-    initialUsers.forEach(user => {
-        const userRef = doc(db, "users", user.id);
-        batch.set(userRef, user);
-    });
-
-    // Initialize windows
-    initialWindows.forEach(window => {
-        // Firebase document IDs cannot be numbers, so we stringify them.
-        const windowRef = doc(db, "windows", String(window.day));
-        batch.set(windowRef, window);
-    });
-
-    await batch.commit();
-    console.log("Firestore initialized successfully.");
-}
-
-
-// --- User Management ---
 export async function getUsers(): Promise<User[]> {
-    const snapshot = await getDocs(query(usersCollection));
-    return snapshot.docs.map(doc => doc.data() as User);
+  return JSON.parse(JSON.stringify(users));
 }
 
 export async function findUserByUsername(username: string): Promise<User | undefined> {
-    const q = query(usersCollection, where("username", "==", username));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-        return undefined;
-    }
-    return snapshot.docs[0].data() as User;
+  return users.find(u => u.username === username);
 }
 
+export async function getWindows(): Promise<CalendarWindow[]> {
+    return JSON.parse(JSON.stringify(windows));
+}
+
+export async function getWindowByDay(day: number): Promise<CalendarWindow | undefined> {
+    return windows.find(w => w.day === day);
+}
+
+// These functions are placeholders for local development if needed, 
+// but the primary data modification logic is handled in `actions.ts` via GitHub API.
 export async function addUser(user: Omit<User, 'id' | 'role'>): Promise<User> {
     const newId = String(Date.now());
     const newUser: User = {
@@ -64,59 +37,44 @@ export async function addUser(user: Omit<User, 'id' | 'role'>): Promise<User> {
         role: 'user',
         ...user,
     };
-    await setDoc(doc(usersCollection, newId), newUser);
+    users.push(newUser);
     return newUser;
 }
 
 export async function deleteUser(id: string): Promise<{ message: string } | null> {
-    const userRef = doc(db, 'users', id);
-    const userDoc = await getDoc(userRef);
-
-    if (!userDoc.exists()) {
+    const userIndex = users.findIndex(u => u.id === id);
+    if (userIndex === -1) {
         return { message: "User not found" };
     }
-    if ((userDoc.data() as User).role === 'admin') {
+    if (users[userIndex].role === 'admin') {
         return { message: "Cannot delete admin user" };
     }
-
-    await deleteDoc(userRef);
+    users.splice(userIndex, 1);
     return null;
 }
 
-
-// --- Window Management ---
-export async function getWindows(): Promise<CalendarWindow[]> {
-    const snapshot = await getDocs(query(windowsCollection, orderBy("day")));
-    return snapshot.docs.map(doc => doc.data() as CalendarWindow);
-}
-
-export async function getWindowByDay(day: number): Promise<CalendarWindow | undefined> {
-    const windowRef = doc(db, 'windows', String(day));
-    const windowDoc = await getDoc(windowRef);
-    if (!windowDoc.exists()) {
-        return undefined;
-    }
-    return windowDoc.data() as CalendarWindow;
-}
-
 export async function updateWindow(day: number, data: Partial<Omit<CalendarWindow, 'day'>>): Promise<CalendarWindow | null> {
-    const windowRef = doc(db, 'windows', String(day));
-    const windowDoc = await getDoc(windowRef);
-
-    if (!windowDoc.exists()) {
+    const windowIndex = windows.findIndex(w => w.day === day);
+    if (windowIndex === -1) {
         return null;
     }
     
-    const existingWindow = windowDoc.data() as CalendarWindow;
+    const existingWindow = windows[windowIndex];
+    const updatedWindow = { ...existingWindow, ...data };
 
-    const updatedData = {
-        ...data,
-        imageHint: data.imageUrl === existingWindow.imageUrl ? existingWindow.imageHint : 'custom image',
-    };
+    // Preserve imageHint if imageUrl hasn't changed
+    if (data.imageUrl === existingWindow.imageUrl) {
+        updatedWindow.imageHint = existingWindow.imageHint;
+    } else {
+        updatedWindow.imageHint = 'custom image';
+    }
     
-    // Using setDoc with merge:true is equivalent to an update operation
-    await setDoc(windowRef, updatedData, { merge: true });
-    
-    const newDoc = await getDoc(windowRef);
-    return newDoc.data() as CalendarWindow;
+    windows[windowIndex] = updatedWindow;
+    return updatedWindow;
+}
+
+export async function initializeData() {
+    users = JSON.parse(JSON.stringify(initialUsers));
+    windows = JSON.parse(JSON.stringify(initialWindows)).sort((a, b) => a.day - b.day);
+    console.log("In-memory data has been reset to initial state.");
 }
