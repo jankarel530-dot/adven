@@ -1,6 +1,8 @@
 import WindowManagement from "@/components/admin/window-management";
 import { getWindows } from "@/lib/data";
 
+export const dynamic = 'force-dynamic';
+
 export default async function WindowsPage() {
     const windows = await getWindows();
 
