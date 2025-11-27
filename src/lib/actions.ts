@@ -78,6 +78,7 @@ export async function login(prevState: any, formData: FormData) {
   }
   
   const { username, password } = validatedFields.data;
+  let redirectTo = "/";
 
   try {
     const users = await getUsers();
@@ -93,21 +94,26 @@ export async function login(prevState: any, formData: FormData) {
             maxAge: 60 * 60 * 24 * 7, // One week
             path: "/",
         });
-        redirect("/admin");
+        redirectTo = "/admin";
+    } else {
+        const user = users.find(u => u.username === username);
+
+        if (!user || user.password !== password) {
+          return { message: "Neplatné uživatelské jméno nebo heslo" };
+        }
+
+        cookies().set("session", user.username, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 60 * 60 * 24 * 7, // One week
+          path: "/",
+        });
+        
+        if (user.role === 'admin') {
+            redirectTo = "/admin";
+        }
     }
 
-    const user = users.find(u => u.username === username);
-
-    if (!user || user.password !== password) {
-      return { message: "Neplatné uživatelské jméno nebo heslo" };
-    }
-
-    cookies().set("session", user.username, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7, // One week
-      path: "/",
-    });
   } catch (error) {
     console.error("Login error:", error);
     if (error instanceof Error) {
@@ -116,7 +122,7 @@ export async function login(prevState: any, formData: FormData) {
     return { message: "Během přihlášení došlo k neočekávané chybě." };
   }
 
-  redirect("/");
+  redirect(redirectTo);
 }
 
 export async function logout() {
