@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { User, CalendarWindow } from "./definitions";
-import { getUsers, getWindows, setUsers, setWindows } from "./data";
+import type { User } from "./definitions";
+import { getUsers } from "./data";
 
 // --- AUTH ACTIONS ---
 
@@ -61,7 +61,7 @@ export async function logout() {
 }
 
 
-// --- ADMIN ACTIONS ---
+// --- ADMIN ACTIONS (DISABLED FOR DESIGN MODE) ---
 
 const userSchema = z.object({
   username: z.string().min(3, "Uživatelské jméno musí mít alespoň 3 znaky."),
@@ -69,68 +69,15 @@ const userSchema = z.object({
 });
 
 export async function addUser(prevState: any, formData: FormData) {
-  revalidatePath('/', 'layout');
-  try {
-      const validatedFields = userSchema.safeParse(
-        Object.fromEntries(formData.entries())
-      );
-
-      if (!validatedFields.success) {
-        return {
-          errors: validatedFields.error.flatten().fieldErrors,
-          message: "Zkontrolujte zadané údaje.",
-        };
-      }
-
-      const { username, password } = validatedFields.data;
-      const users = await getUsers();
-
-      if (users.find(u => u.username === username)) {
-        return {
-          errors: { username: ["Uživatel s tímto jménem již existuje."] },
-          message: "Uživatel s tímto jménem již existuje.",
-        };
-      }
-
-      const newUser: User = {
-        id: new Date().getTime().toString(),
-        username,
-        password,
-        role: "user",
-      };
-
-      const updatedUsers = [...users, newUser];
-      await setUsers(updatedUsers);
-      
-      return { message: `Uživatel ${username} byl úspěšně vytvořen.`, errors: null, isError: false };
-  } catch (error) {
-    console.error("Failed to add user:", error);
-    const message = error instanceof Error ? error.message : "Nepodařilo se přidat uživatele.";
-    return { message, isError: true, errors: { server: [message] } };
-  }
+  console.log("addUser action called, but it's disabled in design mode.");
+  revalidatePath('/admin/users');
+  return { message: `Režim designu: Přidání uživatele je deaktivováno.`, errors: null, isError: false };
 }
 
 export async function deleteUserAction(id: string) {
-    revalidatePath('/', 'layout');
-    try {
-        let users = await getUsers();
-        const userToDelete = users.find(u => u.id === id);
-
-        if (!userToDelete) {
-            return { isError: true, message: "Uživatel nenalezen." };
-        }
-        if (userToDelete.role === 'admin') {
-            return { isError: true, message: "Nelze smazat administrátora." };
-        }
-
-        const updatedUsers = users.filter(u => u.id !== id);
-        await setUsers(updatedUsers);
-        
-        return { isError: false, message: `Uživatel ${userToDelete.username} byl smazán.` };
-    } catch (error) {
-        console.error('Failed to delete user:', error);
-        return { isError: true, message: 'Nepodařilo se smazat uživatele.' };
-    }
+    console.log("deleteUserAction called, but it's disabled in design mode.");
+    revalidatePath('/admin/users');
+    return { isError: false, message: `Režim designu: Mazání uživatele je deaktivováno.` };
 }
 
 const windowSchema = z.object({
@@ -142,39 +89,8 @@ const windowSchema = z.object({
 });
 
 export async function updateWindow(prevState: any, formData: FormData) {
-  revalidatePath('/', 'layout');
-  const validatedFields = windowSchema.safeParse(
-    Object.fromEntries(formData.entries())
-  );
-
-  if (!validatedFields.success) {
-    console.error("Window validation failed:", validatedFields.error.flatten());
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: "Neplatná data pro okénko.",
-      isError: true,
-    };
-  }
-  
-  const { day, ...dataToUpdate } = validatedFields.data;
-
-  try {
-    let windows: CalendarWindow[] = await getWindows();
-    const windowIndex = windows.findIndex(w => w.day === day);
-
-    if (windowIndex === -1) {
-      return { message: `Chyba: Okénko pro den ${day} nebylo nalezeno.`, isError: true };
-    }
-    
-    const existingWindow = windows[windowIndex];
-    windows[windowIndex] = { ...existingWindow, ...dataToUpdate };
-
-    await setWindows(windows);
-    
-    return { message: `Den ${day} byl úspěšně upraven.`, isError: false };
-  } catch (error) {
-    console.error("Failed to update window:", error);
-    const message = error instanceof Error ? error.message : "An unknown error occurred.";
-    return { message: `Nepodařilo se upravit den ${day}: ${message}`, isError: true };
-  }
+  const day = formData.get('day');
+  console.log(`updateWindow action called for day ${day}, but it's disabled in design mode.`);
+  revalidatePath('/admin/windows');
+  return { message: `Režim designu: Úprava okénka ${day} je deaktivována.`, isError: false };
 }
