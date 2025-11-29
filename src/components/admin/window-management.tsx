@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
@@ -20,11 +19,14 @@ import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Bold, Italic } from "lucide-react";
+import { Skeleton } from "../ui/skeleton";
 
 export default function WindowManagement({
   windows,
+  isLoading,
 }: {
   windows: CalendarWindow[];
+  isLoading: boolean;
 }) {
   return (
     <Card>
@@ -34,16 +36,26 @@ export default function WindowManagement({
         </CardHeader>
         <CardContent>
             <Accordion type="single" collapsible className="w-full">
-            {windows.map((window) => (
-                <AccordionItem key={window.day} value={`item-${window.day}`}>
-                <AccordionTrigger className="font-headline text-lg">
-                    Den {window.day}
-                </AccordionTrigger>
-                <AccordionContent>
-                    <WindowForm windowData={window} />
-                </AccordionContent>
+            {isLoading ? (
+              Array.from({ length: 24 }).map((_, i) => (
+                <AccordionItem key={i} value={`item-${i + 1}`} disabled>
+                   <AccordionTrigger className="font-headline text-lg">
+                      <Skeleton className="h-6 w-24" />
+                   </AccordionTrigger>
                 </AccordionItem>
-            ))}
+              ))
+            ) : (
+              windows.map((window) => (
+                  <AccordionItem key={window.day} value={`item-${window.day}`}>
+                  <AccordionTrigger className="font-headline text-lg">
+                      Den {window.day}
+                  </AccordionTrigger>
+                  <AccordionContent>
+                      <WindowForm windowData={window} />
+                  </AccordionContent>
+                  </AccordionItem>
+              ))
+            )}
             </Accordion>
       </CardContent>
     </Card>
@@ -113,6 +125,7 @@ function WindowForm({ windowData }: { windowData: CalendarWindow }) {
     <form ref={formRef} action={action} className="grid gap-6 md:grid-cols-2">
       <div className="space-y-4">
         <input type="hidden" name="day" value={windowData.day} />
+        <input type="hidden" name="id" value={windowData.id} />
         
         <div>
           <Label htmlFor={`message-${windowData.day}`}>Zpráva</Label>

@@ -6,10 +6,11 @@ export type User = {
 };
 
 export type CalendarWindow = {
+  id: string; // Added ID for Firestore
   day: number;
   message: string;
   imageUrl: string;
   imageHint: string;
-  videoUrl?: string; // Add optional videoUrl
+  videoUrl?: string;
   manualState: "default" | "unlocked" | "locked";
 };
