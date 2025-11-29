@@ -1,15 +1,23 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
 import { CalendarWindow as CalendarWindowType } from "@/lib/definitions";
 import CalendarWindow from "./calendar-window";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection, query, orderBy } from "firebase/firestore";
+import { useMemoFirebase } from "@/firebase/provider";
 
-type AdventCalendarProps = {
-  windowsData: string;
-};
+export default function AdventCalendar() {
+  const firestore = useFirestore();
 
-export default function AdventCalendar({ windowsData }: AdventCalendarProps) {
-  const windows: CalendarWindowType[] = useMemo(() => JSON.parse(windowsData), [windowsData]);
+  const windowsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "advent_windows"), orderBy("day"));
+  }, [firestore]);
+
+  const { data: windows, isLoading } = useCollection<CalendarWindowType>(windowsQuery);
+
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [openedWindows, setOpenedWindows] = useState<Set<number>>(new Set());
 
@@ -38,12 +46,11 @@ export default function AdventCalendar({ windowsData }: AdventCalendarProps) {
     localStorage.setItem("openedAdventWindows", JSON.stringify(Array.from(newOpenedWindows)));
   };
 
-  if (!currentDate) {
-    // Show a loading state or placeholders until the client has mounted
+  if (isLoading || !currentDate || !windows) {
     return (
        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-        {windows.map((window) => (
-           <div key={window.day} className="aspect-square animate-pulse rounded-lg bg-muted"></div>
+        {Array.from({ length: 24 }).map((_, i) => (
+           <div key={i} className="aspect-square animate-pulse rounded-lg bg-muted"></div>
         ))}
       </div>
     );

@@ -32,12 +32,12 @@ export default function LoginForm() {
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="username">Email</Label>
+            <Label htmlFor="username">Uživatelské jméno</Label>
             <Input
               id="username"
               name="username"
-              type="email"
-              placeholder="admin@example.com"
+              type="text"
+              placeholder="admin"
               required
               aria-describedby="username-error"
             />

@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Alegreya } from "next/font/google";
 import "./globals.css";
@@ -27,11 +28,11 @@ export default function RootLayout({
   return (
     <html lang="cs" className={`${alegreya.variable}`}>
       <body className="font-body antialiased">
-        <FirebaseClientProvider>
-          {children}
           <Toaster />
           <NotificationHandler />
-        </FirebaseClientProvider>
+          <FirebaseClientProvider>
+            {children}
+          </FirebaseClientProvider>
       </body>
     </html>
   );

@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
 import { Trash2 } from "lucide-react";
@@ -26,13 +26,20 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from "../ui/skeleton";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection } from "firebase/firestore";
+import { useMemoFirebase } from "@/firebase/provider";
 
-type UserManagementProps = {
-  users: User[];
-  isLoading: boolean;
-};
+export default function UserManagement() {
+  const firestore = useFirestore();
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, "users");
+  }, [firestore]);
 
-export default function UserManagement({ users, isLoading }: UserManagementProps) {
+  const { data, isLoading } = useCollection<User>(usersQuery);
+  const users = data || [];
+  
   const { toast } = useToast();
   
   const handleDelete = async (id: string) => {
@@ -55,7 +62,7 @@ export default function UserManagement({ users, isLoading }: UserManagementProps
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Email</TableHead>
+                <TableHead>Uživatelské jméno</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead className="text-right">Akce</TableHead>
               </TableRow>
@@ -91,12 +98,12 @@ export default function UserManagement({ users, isLoading }: UserManagementProps
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Jste si jisti?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tato akce smaže pouze data uživatele z databáze, ale ne z Firebase Authentication. Chcete pokračovat?
+                                  Tato akce je v tomto režimu deaktivována.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Zrušit</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(user.id)}>Smazat</AlertDialogAction>
+                                <AlertDialogAction onClick={() => handleDelete(user.id)}>Pokračovat</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -141,8 +148,8 @@ function AddUserForm() {
       <CardContent>
         <form ref={formRef} action={action} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Email</Label>
-            <Input id="username" name="username" type="email" required aria-describedby="username-error" />
+            <Label htmlFor="username">Uživatelské jméno</Label>
+            <Input id="username" name="username" type="text" required aria-describedby="username-error" />
              <div id="username-error" aria-live="polite" aria-atomic="true">
               {state?.errors?.username && (
                 <p className="text-sm text-destructive">

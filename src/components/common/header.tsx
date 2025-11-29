@@ -2,28 +2,13 @@
 'use client';
 
 import Link from "next/link";
-import { Snowflake, Shield, Loader } from "lucide-react";
-import { useUser } from "@/firebase";
+import { Snowflake, Shield } from "lucide-react";
 import SignOutButton from "@/components/auth/sign-out-button";
 import { Button } from "../ui/button";
-import { useEffect, useState } from "react";
-import { getUserRole } from "@/lib/data";
+import type { User } from "@/lib/definitions";
 
-export default function Header() {
-  const { user, isUserLoading } = useUser();
-  const [userRole, setUserRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchRole() {
-        if (user) {
-            const role = await getUserRole(user.uid);
-            setUserRole(role);
-        }
-    }
-    if(!isUserLoading){
-        fetchRole();
-    }
-  }, [user, isUserLoading]);
+export default function Header({ user }: { user: User | null }) {
+  const isAdmin = user?.role === 'admin';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -37,19 +22,15 @@ export default function Header() {
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
-          {isUserLoading ? <Loader className="h-4 w-4 animate-spin"/> : (
-            <>
-              {userRole === "admin" && (
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/admin">
-                    <Shield className="mr-2 h-4 w-4" />
-                    Admin
-                  </Link>
-                </Button>
-              )}
-              <SignOutButton />
-            </>
+          {isAdmin && (
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/admin">
+                <Shield className="mr-2 h-4 w-4" />
+                Admin
+              </Link>
+            </Button>
           )}
+          {user && <SignOutButton />}
         </div>
       </div>
     </header>

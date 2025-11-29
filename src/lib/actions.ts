@@ -1,34 +1,35 @@
 
-"use server";
+'use server';
 
-import { revalidatePath } from "next/cache";
-import { z } from "zod";
+import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import {
+  setWindow,
+  getUserByUsername,
   getUsers,
   setUser,
-  deleteUser as deleteUserFromDb,
-  getWindows,
-  setWindow,
-  getUser,
-} from "./data";
-import { User, CalendarWindow } from "./definitions";
+} from './data';
+import { CalendarWindow, User } from './definitions';
+import { initializeServerFirebase } from '@/firebase/server-init';
 import {
   getAuth,
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  deleteUser as deleteUserFromAuth,
+  createUserWithEmailAndPassword,
   signOut,
-} from "firebase/auth";
-import { initializeServerFirebase } from "@/firebase/server-init";
-import { redirect } from "next/navigation";
+} from 'firebase/auth';
 
-const { auth } = initializeServerFirebase();
+// This is a temporary solution for the simplified login.
+// In a real app, you would not have a hardcoded "session" like this.
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+
+const SESSION_COOKIE_NAME = 'session';
 
 // --- AUTH ACTIONS ---
 
 const loginSchema = z.object({
-  username: z.string().email("Zadejte platný email."),
-  password: z.string().min(1, "Heslo je povinné."),
+  username: z.string().min(1, 'Uživatelské jméno je povinné.'),
+  password: z.string().min(1, 'Heslo je povinné.'),
 });
 
 export async function login(prevState: any, formData: FormData) {
@@ -39,112 +40,108 @@ export async function login(prevState: any, formData: FormData) {
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Chybně vyplněné údaje.",
+      message: 'Chybně vyplněné údaje.',
     };
   }
 
-  const { username: email, password } = validatedFields.data;
+  const { username, password } = validatedFields.data;
+  const { firestore } = initializeServerFirebase();
 
   try {
-    // We don't need to do anything with the userCredential,
-    // the client-side onAuthStateChanged will handle the redirect.
-    await signInWithEmailAndPassword(auth, email, password);
-  } catch (error: any) {
-    console.error("Firebase sign-in error:", error.code);
-    let message = "Během přihlašování došlo k chybě serveru.";
-    if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
-      message = "Neplatný email nebo heslo.";
+    const user = await getUserByUsername(firestore, username);
+
+    // In a real app, you would hash and compare passwords.
+    // For this design-focused version, we just check if the user exists.
+    if (!user) {
+      return { message: 'Neplatné uživatelské jméno nebo heslo.' };
     }
-    return { message };
+
+    // Create a session cookie
+    const sessionData = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    };
+
+    cookies().set(SESSION_COOKIE_NAME, JSON.stringify(sessionData), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // One week
+      path: '/',
+    });
+  } catch (error: any) {
+    console.error('Login error:', error);
+    return { message: 'Během přihlašování došlo k chybě serveru.' };
   }
 
-  // The redirect will be handled by the client-side auth state listener
-  // but we can revalidate paths here if needed.
-  revalidatePath("/", "layout");
+  // Revalidate and redirect
+  revalidatePath('/', 'layout');
+  redirect('/');
 }
 
 export async function logout() {
-  // Client-side will handle redirect via onAuthStateChanged
+  cookies().delete(SESSION_COOKIE_NAME);
+  revalidatePath('/', 'layout');
+  redirect('/login');
 }
 
 // --- ADMIN ACTIONS ---
 
 const userSchema = z.object({
-  username: z.string().email("Uživatelské jméno musí být platný email."),
-  password: z.string().min(6, "Heslo musí mít alespoň 6 znaků."),
+  username: z.string().min(3, "Uživatelské jméno musí mít alespoň 3 znaky."),
+  password: z.string().min(6, 'Heslo musí mít alespoň 6 znaků.'),
 });
 
 export async function addUser(prevState: any, formData: FormData) {
-  const validatedFields = userSchema.safeParse(
+   const validatedFields = userSchema.safeParse(
     Object.fromEntries(formData.entries())
   );
 
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Chybně vyplněné údaje.",
+      message: 'Chybně vyplněné údaje.',
       isError: true,
     };
   }
+  
+  const { username, password } = validatedFields.data;
 
-  const { username: email, password } = validatedFields.data;
 
   try {
     const { firestore } = initializeServerFirebase();
-    const existingUsers = await getUsers(firestore);
-    const existingUserInDb = existingUsers.find((u) => u.username === email);
+    const existingUser = await getUserByUsername(firestore, username);
     
-    if (existingUserInDb) {
-      return { message: "Uživatel s tímto emailem již existuje.", isError: true };
+    if (existingUser) {
+      return { message: 'Uživatel s tímto jménem již existuje.', isError: true };
     }
 
-    // This creates the user in Firebase Auth
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-    const authUser = userCredential.user;
-
-    // Now create the user profile in Firestore
-    const newUser: User = {
-      id: authUser.uid,
-      username: email,
-      // We don't store the password in the database
-      role: "user",
+    // In a real app you'd hash the password.
+    // Here we just create the user data structure.
+     const newUser: Omit<User, 'id'> = {
+      username: username,
+      role: 'user',
+      password: password, // This is just for the data structure, not for secure storage
     };
 
     await setUser(firestore, newUser);
-    revalidatePath("/admin/users");
+
+    revalidatePath('/admin/users');
     return {
-      message: `Uživatel ${newUser.username} byl vytvořen.`,
+      message: `Uživatel ${username} byl vytvořen.`,
       isError: false,
     };
   } catch (e: any) {
-    console.error("Add user error:", e.code);
-    let message = "Došlo k chybě při vytváření uživatele.";
-    if (e.code === 'auth/email-already-in-use') {
-        message = 'Tento email je již používán jiným účtem.';
-    }
-    return { message, isError: true };
+    console.error("Add user error:", e);
+    return { message: 'Došlo k chybě při vytváření uživatele.', isError: true };
   }
 }
 
 export async function deleteUserAction(id: string) {
-  try {
-    const { firestore } = initializeServerFirebase();
-    // It's not possible to delete a user from the server-side client SDK easily.
-    // This action should ideally be performed by an admin SDK on a trusted server environment.
-    // For this project, we will just delete the user's data from Firestore.
-    // The user will still exist in Firebase Auth.
-    await deleteUserFromDb(firestore, id);
-    revalidatePath("/admin/users");
-    return { message: `Uživatelská data byla smazána.`, isError: false };
-  } catch (e) {
-    const message =
-      e instanceof Error ? e.message : "Došlo k chybě při mazání uživatele.";
-    return { message, isError: true };
-  }
+  // This is a placeholder as deleting users is complex with our simple auth
+  console.log('Attempted to delete user:', id);
+  revalidatePath('/admin/users');
+  return { message: `Mazání uživatelů je v tomto režimu deaktivováno.`, isError: true };
 }
 
 const windowSchema = z.object({
@@ -153,19 +150,19 @@ const windowSchema = z.object({
   message: z.string().optional(),
   imageUrl: z
     .string()
-    .url({ message: "Zadejte platnou URL adresu obrázku." })
-    .or(z.literal(""))
+    .url({ message: 'Zadejte platnou URL adresu obrázku.' })
+    .or(z.literal(''))
     .optional(),
   videoUrl: z
     .string()
-    .url({ message: "Zadejte platnou URL pro video." })
-    .or(z.literal(""))
+    .url({ message: 'Zadejte platnou URL pro video.' })
+    .or(z.literal(''))
     .optional(),
-  manualState: z.enum(["default", "unlocked", "locked"]),
+  manualState: z.enum(['default', 'unlocked', 'locked']),
 });
 
 export async function updateWindow(prevState: any, formData: FormData) {
-  const day = formData.get("day");
+  const day = formData.get('day');
 
   const validatedFields = windowSchema.safeParse(
     Object.fromEntries(formData.entries())
@@ -174,7 +171,7 @@ export async function updateWindow(prevState: any, formData: FormData) {
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Chybně vyplněné údaje.",
+      message: 'Chybně vyplněné údaje.',
       isError: true,
     };
   }
@@ -193,15 +190,15 @@ export async function updateWindow(prevState: any, formData: FormData) {
     const updatedWindow: CalendarWindow = {
       ...windowToUpdate,
       ...validatedFields.data,
-      message: validatedFields.data.message ?? "",
-      imageUrl: validatedFields.data.imageUrl ?? "",
-      videoUrl: validatedFields.data.videoUrl ?? "",
+      message: validatedFields.data.message ?? '',
+      imageUrl: validatedFields.data.imageUrl ?? '',
+      videoUrl: validatedFields.data.videoUrl ?? '',
     };
 
     await setWindow(firestore, updatedWindow);
 
-    revalidatePath("/admin/windows");
-    revalidatePath("/");
+    revalidatePath('/admin/windows');
+    revalidatePath('/');
 
     return {
       message: `Okénko ${day} bylo úspěšně aktualizováno.`,

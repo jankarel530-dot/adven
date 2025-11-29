@@ -1,51 +1,32 @@
 
-'use client';
-
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Home, Users, Settings, Snowflake, Shield, Loader } from "lucide-react";
-import { useUser } from "@/firebase";
+import { Home, Users, Settings, Snowflake, Shield } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ReactNode, useEffect, useState } from "react";
-import { getUserRole } from "@/lib/data";
+import { ReactNode } from "react";
+import { cookies } from 'next/headers';
+import type { User } from "@/lib/definitions";
+import Header from "@/components/common/header";
 
 export default function AdminLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  const { user, isUserLoading } = useUser();
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [isRoleLoading, setIsRoleLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchRole() {
-      if (user) {
-        const role = await getUserRole(user.uid);
-        setUserRole(role);
-      }
-      setIsRoleLoading(false);
-    }
-    if (!isUserLoading) {
-      fetchRole();
-    }
-  }, [user, isUserLoading]);
-
-  if (isUserLoading || isRoleLoading) {
-    return (
-      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40">
-        <Loader className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    );
+  const sessionCookie = cookies().get('session')?.value;
+  if (!sessionCookie) {
+      redirect('/login');
   }
 
-  if (!user || userRole !== "admin") {
-    redirect("/");
+  const user: User = JSON.parse(sessionCookie);
+
+  if (user.role !== 'admin') {
+      redirect('/');
   }
 
   return (
@@ -99,10 +80,8 @@ export default function AdminLayout({
           </TooltipProvider>
         </nav>
       </aside>
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-            <Link href="/" className="text-lg font-semibold">Admin Panel</Link>
-        </header>
+       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+        <Header user={user} />
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           {children}
         </main>
