@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import {
   Accordion,
   AccordionContent,
@@ -81,7 +82,7 @@ const getEmbedUrl = (url: string) => {
 };
 
 function WindowForm({ windowData }: { windowData: CalendarWindow }) {
-  const [state, action] = useFormState(updateWindow, undefined);
+  const [state, action] = useActionState(updateWindow, undefined);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   

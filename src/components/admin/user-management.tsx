@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import type { User } from "@/lib/definitions";
 import { addUser, deleteUserAction } from "@/lib/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -116,7 +117,7 @@ export default function UserManagement({ users, isLoading }: UserManagementProps
 }
 
 function AddUserForm() {
-  const [state, action] = useFormState(addUser, undefined);
+  const [state, action] = useActionState(addUser, undefined);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
 

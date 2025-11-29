@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { login } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Snowflake } from "lucide-react";
 
 export default function LoginForm() {
-  const [state, action] = useFormState(login, undefined);
+  const [state, action] = useActionState(login, undefined);
 
   return (
     <form action={action}>
