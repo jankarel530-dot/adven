@@ -5,7 +5,6 @@ import { useUser, useFirestore } from "@/firebase";
 import AdventCalendar from "@/components/calendar/advent-calendar";
 import { Loader } from "lucide-react";
 import Header from "@/components/common/header";
-import { redirect } from "next/navigation";
 
 export default function HomePage() {
   const { user, isUserLoading } = useUser();
@@ -16,11 +15,6 @@ export default function HomePage() {
         <Loader className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
-  }
-  
-  if (!user) {
-    redirect("/login");
-    return null; // or a loading spinner
   }
 
   return (

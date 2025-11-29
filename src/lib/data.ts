@@ -23,23 +23,25 @@ import windowsData from './data/windows.json';
 // --- One-time Data Seeding ---
 async function seedFirestore() {
   const { firestore } = initializeServerFirebase();
-  const usersCollection = collection(firestore, 'users');
-  const userSnapshot = await getDocs(query(usersCollection));
   
-  if (userSnapshot.empty) {
+  // Check users - only seed if the admin user doesn't exist
+  const adminUserQuery = query(collection(firestore, 'users'), where('username', '==', 'admin'));
+  const adminSnapshot = await getDocs(adminUserQuery);
+
+  if (adminSnapshot.empty) {
     console.log('Seeding users...');
     const batch = writeBatch(firestore);
     usersData.forEach((userData) => {
       // In a real app, you would HASH the password. Here, we're storing it
       // plaintext for simplicity of the non-Firebase-Auth login flow.
-      const docRef = doc(usersCollection, userData.id); // Use the predefined ID
-      batch.set(docRef, { ...userData });
+      const userRef = doc(firestore, 'users', userData.id); // Use the predefined ID
+      batch.set(userRef, { ...userData });
     });
     await batch.commit();
     console.log('Users seeding finished.');
   }
 
-  // Check windows
+  // Check windows - only seed if collection is empty
   const windowsCollection = collection(firestore, 'advent_windows');
   const windowSnapshot = await getDocs(query(windowsCollection));
   if (windowSnapshot.empty) {
@@ -68,7 +70,7 @@ seedFirestore().catch(console.error);
 export async function getUsers(db: Firestore): Promise<User[]> {
   const usersCollection = collection(db, 'users');
   const userSnapshot = await getDocs(query(usersCollection));
-  return userSnapshot.docs.map((doc) => doc.data() as User);
+  return userSnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id } as User));
 }
 
 export async function getUser(db: Firestore, id: string): Promise<User | null> {
@@ -93,6 +95,7 @@ export async function getUserByUsername(
 export async function setUser(db: Firestore, user: Omit<User, 'id'>): Promise<string> {
     const usersCollection = collection(db, 'users');
     const docRef = await addDoc(usersCollection, user);
+    await setDoc(docRef, { ...user, id: docRef.id }); // Add the ID to the document itself
     return docRef.id;
 }
 

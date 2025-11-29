@@ -1,19 +1,23 @@
 
 'use client';
 
-import React, { DependencyList, createContext, useContext, ReactNode, useMemo } from 'react';
+import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
-import { Auth, User } from 'firebase/auth';
+import { Auth, User, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { getUser } from '@/lib/client-data';
+import type { User as AppUser } from '@/lib/definitions';
 
-// This provider is simplified to just provide the service instances.
-// Auth state will be handled by a separate, simpler session cookie mechanism.
 
 export interface FirebaseContextState {
   firebaseApp: FirebaseApp;
   firestore: Firestore;
   auth: Auth;
+  authUser: User | null;
+  appUser: AppUser | null;
+  isUserLoading: boolean;
+  userError: Error | null;
 }
 
 // React Context
@@ -32,13 +36,61 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   firestore,
   auth,
 }) => {
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [appUser, setAppUser] = useState<AppUser | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
+  const [userError, setUserError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setIsUserLoading(true);
+      if (user) {
+        setAuthUser(user);
+        try {
+          const profile = await getUser(firestore, user.uid);
+          if (profile) {
+            setAppUser(profile);
+          } else if(user.isAnonymous) {
+            // It's a new anonymous user, we can treat them as a 'user' role by default
+            setAppUser({id: user.uid, username: 'anonymous', role: 'user'});
+          } else {
+            // Logged in with a provider, but no profile yet
+            setAppUser(null);
+          }
+        } catch (e: any) {
+           setUserError(e);
+           console.error("Failed to fetch user profile:", e);
+        }
+      } else {
+        // No user is signed in, try to sign in anonymously
+        signInAnonymously(auth).catch(e => {
+            console.error("Anonymous sign-in failed", e);
+            setUserError(e);
+        });
+        setAuthUser(null);
+        setAppUser(null);
+      }
+      setIsUserLoading(false);
+    }, (error) => {
+        console.error("Auth state change error", error);
+        setUserError(error);
+        setIsUserLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [auth, firestore]);
+
   const contextValue = useMemo(() => {
     return {
       firebaseApp,
       firestore,
       auth,
+      authUser,
+      appUser,
+      isUserLoading,
+      userError,
     };
-  }, [firebaseApp, firestore, auth]);
+  }, [firebaseApp, firestore, auth, authUser, appUser, isUserLoading, userError]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
@@ -77,10 +129,15 @@ export const useFirebaseApp = (): FirebaseApp => {
   return firebaseApp;
 };
 
-// This hook is no longer relevant with the session cookie approach, but we keep it
-// to avoid breaking imports. It will return a placeholder value.
+// This hook provides the authenticated user state.
 export const useUser = () => {
-    return { user: null, isUserLoading: true, userError: null };
+    const context = useFirebase();
+    return {
+        user: context.appUser, // This is our app-specific user profile
+        authUser: context.authUser, // This is the raw Firebase auth user
+        isUserLoading: context.isUserLoading,
+        userError: context.userError,
+    };
 }
 
 type MemoFirebase <T> = T & {__memo?: boolean};

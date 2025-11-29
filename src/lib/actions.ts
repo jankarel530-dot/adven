@@ -27,62 +27,10 @@ const SESSION_COOKIE_NAME = 'session';
 
 // --- AUTH ACTIONS ---
 
-const loginSchema = z.object({
-  username: z.string().min(1, 'Uživatelské jméno je povinné.'),
-  password: z.string().min(1, 'Heslo je povinné.'),
-});
-
-export async function login(prevState: any, formData: FormData) {
-  const validatedFields = loginSchema.safeParse(
-    Object.fromEntries(formData.entries())
-  );
-
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Chybně vyplněné údaje.',
-    };
-  }
-
-  const { username, password } = validatedFields.data;
-  const { firestore } = initializeServerFirebase();
-
-  try {
-    const user = await getUserByUsername(firestore, username);
-
-    // In a real app, you would hash and compare passwords.
-    // For this design-focused version, we just check if the user exists.
-    if (!user) {
-      return { message: 'Neplatné uživatelské jméno nebo heslo.' };
-    }
-
-    // Create a session cookie
-    const sessionData = {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-    };
-
-    cookies().set(SESSION_COOKIE_NAME, JSON.stringify(sessionData), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7, // One week
-      path: '/',
-    });
-  } catch (error: any) {
-    console.error('Login error:', error);
-    return { message: 'Během přihlašování došlo k chybě serveru.' };
-  }
-
-  // Revalidate and redirect
-  revalidatePath('/', 'layout');
-  redirect('/');
-}
-
 export async function logout() {
   cookies().delete(SESSION_COOKIE_NAME);
   revalidatePath('/', 'layout');
-  redirect('/login');
+  redirect('/');
 }
 
 // --- ADMIN ACTIONS ---
@@ -178,24 +126,15 @@ export async function updateWindow(prevState: any, formData: FormData) {
 
   try {
     const { firestore } = initializeServerFirebase();
-    const windows = await getWindows(firestore);
-    const windowToUpdate = windows.find(
-      (w) => w.id === validatedFields.data.id
-    );
-
-    if (!windowToUpdate) {
-      throw new Error(`Window with id ${validatedFields.data.id} not found.`);
-    }
-
-    const updatedWindow: CalendarWindow = {
-      ...windowToUpdate,
-      ...validatedFields.data,
-      message: validatedFields.data.message ?? '',
-      imageUrl: validatedFields.data.imageUrl ?? '',
-      videoUrl: validatedFields.data.videoUrl ?? '',
+    
+    const updatedWindow: Partial<CalendarWindow> = {
+        ...validatedFields.data,
+        message: validatedFields.data.message ?? '',
+        imageUrl: validatedFields.data.imageUrl ?? '',
+        videoUrl: validatedFields.data.videoUrl ?? '',
     };
-
-    await setWindow(firestore, updatedWindow);
+    
+    await setWindow(firestore, updatedWindow as CalendarWindow);
 
     revalidatePath('/admin/windows');
     revalidatePath('/');

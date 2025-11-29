@@ -1,4 +1,6 @@
 
+'use client';
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Home, Users, Settings, Snowflake, Shield } from "lucide-react";
@@ -9,24 +11,28 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ReactNode } from "react";
-import { cookies } from 'next/headers';
-import type { User } from "@/lib/definitions";
+import { useUser } from "@/firebase";
 import Header from "@/components/common/header";
+import { Loader } from "lucide-react";
 
 export default function AdminLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  const sessionCookie = cookies().get('session')?.value;
-  if (!sessionCookie) {
-      redirect('/login');
+  const { user, isUserLoading } = useUser();
+
+  if (isUserLoading) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center">
+        <Loader className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  const user: User = JSON.parse(sessionCookie);
-
-  if (user.role !== 'admin') {
+  if (user?.role !== 'admin') {
       redirect('/');
+      return null;
   }
 
   return (

@@ -3,38 +3,17 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { User } from '@/lib/definitions';
 
-const SESSION_COOKIE_NAME = 'session';
-
+// This middleware is now simplified as auth state is handled on the client.
+// It can be used for other purposes later if needed.
 export function middleware(request: NextRequest) {
-  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const { pathname } = request.nextUrl;
 
-  // If there's no session, redirect to login page, unless they are already there
-  if (!sessionCookie) {
-    if (pathname !== '/login') {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-    return NextResponse.next();
-  }
-
-  // If there is a session, parse it
-  try {
-    const user: User = JSON.parse(sessionCookie);
-
-    // If a logged-in user tries to access the login page, redirect them to home
-    if (pathname === '/login') {
-      return NextResponse.redirect(new URL('/', request.url));
-    }
-
-    // If a non-admin tries to access an admin route, redirect them to home
-    if (pathname.startsWith('/admin') && user.role !== 'admin') {
-      return NextResponse.redirect(new URL('/', request.url));
-    }
-  } catch (error) {
-    // If the cookie is malformed, delete it and redirect to login
-    const response = NextResponse.redirect(new URL('/login', request.url));
-    response.cookies.delete(SESSION_COOKIE_NAME);
-    return response;
+  // Basic protection for admin routes, but relies on client-side checks for real security.
+  // A malicious user could bypass this. True security is in Firestore rules.
+  if (pathname.startsWith('/admin')) {
+    // In a real app, you'd verify a token here. For now, we can't do much
+    // without a server-side session, so we rely on client-side redirects
+    // and Firestore rules.
   }
 
   return NextResponse.next();
