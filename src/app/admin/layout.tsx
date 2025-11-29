@@ -1,21 +1,50 @@
+
+'use client';
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Home, Users, Settings, Snowflake, Shield } from "lucide-react";
-import { getSession } from "@/lib/auth";
+import { Home, Users, Settings, Snowflake, Shield, Loader } from "lucide-react";
+import { useUser } from "@/firebase";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ReactNode, useEffect, useState } from "react";
+import { getUserRole } from "@/lib/data";
 
-export default async function AdminLayout({
+export default function AdminLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
-  const user = await getSession();
-  if (!user || user.role !== "admin") {
+  const { user, isUserLoading } = useUser();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isRoleLoading, setIsRoleLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchRole() {
+      if (user) {
+        const role = await getUserRole(user.uid);
+        setUserRole(role);
+      }
+      setIsRoleLoading(false);
+    }
+    if (!isUserLoading) {
+      fetchRole();
+    }
+  }, [user, isUserLoading]);
+
+  if (isUserLoading || isRoleLoading) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40">
+        <Loader className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user || userRole !== "admin") {
     redirect("/");
   }
 

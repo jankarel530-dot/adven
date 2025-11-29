@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useActionState } from "react";
@@ -31,11 +32,12 @@ export default function LoginForm() {
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="username">Uživatelské jméno</Label>
+            <Label htmlFor="username">Email</Label>
             <Input
               id="username"
               name="username"
-              type="text"
+              type="email"
+              placeholder="admin@example.com"
               required
               aria-describedby="username-error"
             />
