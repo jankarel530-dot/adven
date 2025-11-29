@@ -37,7 +37,6 @@ export default function LoginForm() {
               id="username"
               name="username"
               type="text"
-              placeholder="admin"
               required
               aria-describedby="username-error"
             />
