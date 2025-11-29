@@ -1,0 +1,158 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "username": {
+          "type": "string",
+          "description": "The username of the user."
+        },
+        "isAdmin": {
+          "type": "boolean",
+          "description": "Indicates whether the user has administrator privileges."
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "isAdmin"
+      ]
+    },
+    "AdventWindow": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AdventWindow",
+      "type": "object",
+      "description": "Represents a single window in the Advent calendar.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Advent window."
+        },
+        "day": {
+          "type": "number",
+          "description": "The day of December this window represents (1-24)."
+        },
+        "text": {
+          "type": "string",
+          "description": "The text content of the window."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the image associated with the window."
+        },
+        "isUnlocked": {
+          "type": "boolean",
+          "description": "Indicates whether the window is unlocked and accessible."
+        }
+      },
+      "required": [
+        "id",
+        "day",
+        "text",
+        "imageUrl",
+        "isUnlocked"
+      ]
+    },
+    "UserNotification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserNotification",
+      "type": "object",
+      "description": "Represents a notification sent to a user for an Advent window.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the notification."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N UserNotification)"
+        },
+        "adventWindowId": {
+          "type": "string",
+          "description": "Reference to AdventWindow. (Relationship: AdventWindow 1:N UserNotification)"
+        },
+        "sentAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the notification was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "adventWindowId",
+        "sentAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user data. Path-based ownership enforced. Includes 'isAdmin' property to determine admin privileges (DBAC).",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/advent_windows/{adventWindowId}",
+        "definition": {
+          "entityName": "AdventWindow",
+          "schema": {
+            "$ref": "#/backend/entities/AdventWindow"
+          },
+          "description": "Stores Advent window data. Accessible by all users, but only modifiable by admins.",
+          "params": [
+            {
+              "name": "adventWindowId",
+              "description": "The unique identifier of the Advent window."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/user_notifications/{userNotificationId}",
+        "definition": {
+          "entityName": "UserNotification",
+          "schema": {
+            "$ref": "#/backend/entities/UserNotification"
+          },
+          "description": "Stores notifications for each user related to Advent windows. Enforces ownership by the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "userNotificationId",
+              "description": "The unique identifier of the user notification."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This design prioritizes security and scalability for the Vánoční Čas application. It enforces Authorization Independence through denormalization and supports secure list operations (QAPs) using structural segregation.\n\n**Users:** User data is stored in a dedicated collection (`/users/{userId}`) ensuring path-based ownership and simplified security rules. The `isAdmin` property is directly on the user document, avoiding the need for a separate roles collection for admin status (DBAC).\n\n**Advent Windows:** Advent windows are stored in a global collection (`/advent_windows/{adventWindowId}`). Since access control is primarily based on the date and admin override, a global collection simplifies management and avoids user-specific data duplication. Manual lock/unlock is supported by directly modifying `isUnlocked` property. To support the app requirement that the user has to receive notification, we store the `UserNotification` in `/users/{userId}/user_notifications/{userNotificationId}`, the UserNotification includes reference to the AdventWindow document.\n\n**Authorization Independence:** The structure is designed to avoid `get()` calls in security rules. Specifically:\n*   User's admin status is stored directly in the user document (`/users/{userId}`). This avoids needing to `get()` the user document to check admin privileges. The `userId` from `request.auth.uid` is used.\n\n**QAPs (Rules are not Filters):** The structure supports secure `list` operations. For example:\n*   Listing all available windows. Anyone can list all windows, but only admin users can modify.\n\n**Invariants:** The structure supports the integrity of ownership and timestamps:\n*   Ownership: User-owned data is stored under the `/users/{userId}` path, ensuring clear ownership. Notifications have explicit `userId` field.\n*   Timestamps: The `sentAt` field in `UserNotification` records the time the notification was sent.\n\nThis structure, with its emphasis on denormalization and structural segregation, facilitates the creation of simple, robust, and easily debuggable Firestore security rules, aligning with the core design principles."
+  }
+}

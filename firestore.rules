@@ -1,0 +1,126 @@
+/**
+ * Core Philosophy: This ruleset implements a hybrid security model that combines
+ * user-ownership with role-based access control (RBAC) for administrators.
+ * User-specific data is strictly private and owned by the user, while global
+ * application data (like Advent Windows) is publicly readable but can only be
+ * managed by designated administrators.
+ *
+ * Data Structure: The data is organized into two main areas:
+ * - A top-level `/users/{userId}` collection where each document represents a
+ *   user's profile and serves as the root for their private subcollections (e.g., notifications).
+ * - A top-level `/advent_windows` collection for publicly accessible data that is
+ *   shared across all users of the application.
+ *
+ * Key Security Decisions:
+ * - User Enumeration is Disabled: Listing documents in the `/users` collection is
+ *   explicitly forbidden to protect user privacy.
+ * - Admin Privileges: A boolean `isAdmin` flag on a user's own document
+ *   (`/users/{userId}`) grants them write permissions on global collections. This
+ *   is checked using a `get()` call targeted at the requesting user's own profile.
+ * - Default Secure: Access is denied by default. Rules explicitly grant permissions
+ *   for specific, intended operations.
+ * - Structural Segregation: User-private notifications are stored in a subcollection
+ *   (`/users/{userId}/user_notifications`) separate from the public `/advent_windows`
+ *   collection. This makes it easy and performant to secure private data while
+ *   allowing public listing of shared data.
+ *
+ * Denormalization for Authorization: The security model relies on the `isAdmin`
+ * field being denormalized directly onto each user's document in `/users/{userId}`.
+ * This allows a fast, efficient check (`get(/databases/$(database)/documents/users/$(request.auth.uid))`)
+ * to determine a user's role without requiring slow or impossible cross-collection queries.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------------------------------------------------
+    // Helper Functions
+    // ----------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     * This is the foundation of the user-ownership model.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks for ownership on an existing document. Used for update/delete.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Checks if the requesting user has admin privileges by looking up their
+     * own user document. This is a secure and efficient way to handle roles.
+     */
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    /**
+     * Combines an admin check with an existence check for update/delete operations.
+     */
+    function isExistingAdmin() {
+      return isAdmin() && resource != null;
+    }
+
+    // ----------------------------------------------------------------------
+    // Collection Rules
+    // ----------------------------------------------------------------------
+
+    /**
+     * @description Manages user profile data.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document for the first time.
+     * @deny (list) Any user attempting to list all user profiles.
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Manages user-specific notifications for Advent windows.
+       * @path /users/{userId}/user_notifications/{userNotificationId}
+       * @allow (create) A user creating a notification document for themselves.
+       * @deny (get) Another user trying to read someone else's notification.
+       * @principle Enforces document ownership within a user's private data tree.
+       */
+      match /user_notifications/{userNotificationId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    /**
+     * @description Manages global Advent Window data.
+     * @path /advent_windows/{adventWindowId}
+     * @allow (get, list) Any user, including unauthenticated users, can read the Advent Windows.
+     * @deny (create) A non-admin user trying to create a new Advent Window.
+     * @principle Allows public read access while restricting write access to administrators (RBAC).
+     */
+    match /advent_windows/{adventWindowId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isAdmin();
+      allow update: if isExistingAdmin();
+      allow delete: if isExistingAdmin();
+    }
+  }
+}
